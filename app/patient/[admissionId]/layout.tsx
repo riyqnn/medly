@@ -1,6 +1,18 @@
 import { notFound } from "next/navigation";
 import { getBedsideSession } from "@/src/features/patient/utils/session";
+import { BrandMark } from "@/src/features/shell/components/Brand";
 import PatientNav from "./PatientNav";
+
+/** Initials for the care-team stack — the bedside has no photos to show. */
+function initials(name: string) {
+  return name
+    .replace(/^(dr\.?|drg\.?|ns\.?)\s*/i, "")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
 
 export default async function PatientLayout({
   children,
@@ -14,30 +26,44 @@ export default async function PatientLayout({
   if (!session) notFound();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black">
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-        <div className="flex items-center justify-between max-w-5xl mx-auto">
-          <div>
-            <p className="text-xs text-gray-500">{session.hospital?.name}</p>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-              {session.patient?.full_name}
-            </h1>
-          </div>
-          <div className="text-right text-sm">
-            <p className="text-gray-500">
-              Kamar <span className="font-semibold text-gray-900 dark:text-white">{session.room?.room_number || "-"}</span>
-            </p>
-            <p className="text-gray-500">Hari rawat ke-{session.day_of_stay}</p>
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 via-canvas to-canvas">
+      <header className="mx-auto flex max-w-7xl items-start justify-between gap-6 px-6 pb-2 pt-7 sm:px-8">
+        <div>
+          <p className="eyebrow">
+            Kamar {session.room?.room_number ?? "—"}
+            {session.room?.ward_name ? ` · ${session.room.ward_name}` : ""}
+          </p>
+          <div className="mt-2 flex items-center gap-2.5">
+            <BrandMark className="h-8 w-8" />
+            <span className="text-lg font-extrabold tracking-tight text-ink">Medly</span>
+            <span className="hidden text-sm font-medium text-ink-mute sm:inline">
+              · {session.hospital?.name}
+            </span>
           </div>
         </div>
+
+        {session.doctors.length > 0 && (
+          <div className="text-right">
+            <p className="eyebrow">Tim perawatan Anda</p>
+            <div className="mt-2 flex items-center justify-end -space-x-2">
+              {session.doctors.slice(0, 3).map((d) => (
+                <span
+                  key={d.id}
+                  title={`${d.full_name}${d.specialization ? ` — ${d.specialization}` : ""}`}
+                  className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-brand-100 text-[11px] font-extrabold text-brand-700 shadow-sm transition hover:z-10 hover:-translate-y-0.5"
+                >
+                  {initials(d.full_name)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
-      <PatientNav
-        admissionId={session.admission_id}
-        showSpiritual={!!session.hospital?.spiritual_support_enabled}
-      />
+      {/* Bottom padding clears the floating nav. */}
+      <main className="mx-auto max-w-7xl animate-fade-up px-6 pb-32 pt-4 sm:px-8">{children}</main>
 
-      <main className="max-w-5xl mx-auto px-6 py-6">{children}</main>
+      <PatientNav admissionId={session.admission_id} />
     </div>
   );
 }

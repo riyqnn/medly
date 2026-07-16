@@ -1,16 +1,23 @@
 import Link from "next/link";
+import { ShieldOff } from "lucide-react";
 
 export default function ForbiddenPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="text-center p-8 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-red-200 dark:border-red-900 max-w-md">
-        <h1 className="text-4xl font-bold text-red-600 dark:text-red-500 mb-4">403</h1>
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">Forbidden Access</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          You do not have the required permissions to view this dashboard. Your role restricts access to this resource.
+    <div className="grid min-h-screen place-items-center bg-canvas px-6">
+      <div className="card w-full max-w-md animate-fade-up p-8 text-center">
+        <span className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+          <ShieldOff className="h-5 w-5" strokeWidth={2.1} />
+        </span>
+        <p className="eyebrow">Error 403</p>
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
+          Halaman ini bukan untuk peran Anda
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          Akun Anda tidak punya akses ke dashboard tersebut. Kembali ke dashboard sesuai peran Anda
+          untuk melanjutkan.
         </p>
-        <Link href="/dashboard" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          Return to Dashboard
+        <Link href="/dashboard" className="btn-primary mt-6 w-full">
+          Kembali ke dashboard saya
         </Link>
       </div>
     </div>

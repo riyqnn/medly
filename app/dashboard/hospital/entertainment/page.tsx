@@ -1,7 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusIcon, X } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Clapperboard,
+  Film,
+  Tv,
+  Music,
+  Mic,
+  BookOpen,
+  Newspaper,
+  Gamepad2,
+  Wind,
+  Megaphone,
+  type LucideIcon,
+} from "lucide-react";
+import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Modal, FormError } from "@/src/features/shell/components/Modal";
+import { ENTERTAINMENT_CATEGORIES } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface Content {
   id: string;
@@ -10,12 +29,30 @@ interface Content {
   is_published: boolean;
   hospital_id: string | null;
   media_url: string | null;
+  thumbnail_url: string | null;
   display_order: number;
 }
 
-const CATEGORIES = ["MOVIE", "TV", "MUSIC", "PODCAST", "EBOOK", "MAGAZINE", "GAME_LINK", "RELAXATION_VIDEO", "BANNER"];
-const CAT_ICON: Record<string, string> = { MOVIE: "🎬", TV: "📺", MUSIC: "🎵", PODCAST: "🎙️", EBOOK: "📖", MAGAZINE: "📰", GAME_LINK: "🎮", RELAXATION_VIDEO: "🌿", BANNER: "📢" };
-const EMPTY_FORM = { title: "", category: "MOVIE", media_url: "", display_order: 0, is_published: true };
+const ICONS: Record<string, LucideIcon> = {
+  MOVIE: Film,
+  TV: Tv,
+  MUSIC: Music,
+  PODCAST: Mic,
+  EBOOK: BookOpen,
+  MAGAZINE: Newspaper,
+  GAME_LINK: Gamepad2,
+  RELAXATION_VIDEO: Wind,
+  BANNER: Megaphone,
+};
+
+const EMPTY_FORM = {
+  title: "",
+  category: "MOVIE",
+  media_url: "",
+  thumbnail_url: "",
+  display_order: 0,
+  is_published: true,
+};
 
 export default function EntertainmentPage() {
   const [contents, setContents] = useState<Content[]>([]);
@@ -25,143 +62,281 @@ export default function EntertainmentPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [filterCat, setFilterCat] = useState("");
+  const [filter, setFilter] = useState("");
 
-  useEffect(() => { load(); }, [filterCat]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   async function load() {
     setLoading(true);
-    const url = filterCat ? `/api/entertainment?category=${filterCat}` : "/api/entertainment";
-    const res = await fetch(url);
+    const res = await fetch(filter ? `/api/entertainment?category=${filter}` : "/api/entertainment");
     if (res.ok) setContents(await res.json());
     setLoading(false);
   }
 
-  function openAdd() { setEditTarget(null); setForm(EMPTY_FORM); setError(""); setShowModal(true); }
+  function openAdd() {
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+    setError("");
+    setShowModal(true);
+  }
+
   function openEdit(c: Content) {
     setEditTarget(c);
-    setForm({ title: c.title, category: c.category, media_url: c.media_url || "", display_order: c.display_order, is_published: c.is_published });
-    setError(""); setShowModal(true);
+    setForm({
+      title: c.title,
+      category: c.category,
+      media_url: c.media_url ?? "",
+      thumbnail_url: c.thumbnail_url ?? "",
+      display_order: c.display_order,
+      is_published: c.is_published,
+    });
+    setError("");
+    setShowModal(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true); setError("");
+    setSaving(true);
+    setError("");
     const res = editTarget
-      ? await fetch(`/api/entertainment/${editTarget.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
-      : await fetch("/api/entertainment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Failed"); setSaving(false); return; }
-    setShowModal(false); load();
+      ? await fetch(`/api/entertainment/${editTarget.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        })
+      : await fetch("/api/entertainment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
     setSaving(false);
+    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    setShowModal(false);
+    load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this content?")) return;
+    if (!confirm("Hapus konten ini?")) return;
     await fetch(`/api/entertainment/${id}`, { method: "DELETE" });
     load();
   }
 
   async function togglePublish(c: Content) {
     if (!c.hospital_id) return;
-    await fetch(`/api/entertainment/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_published: !c.is_published }) });
+    await fetch(`/api/entertainment/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_published: !c.is_published }),
+    });
     load();
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Entertainment Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage movies, music, banners and more</p>
-        </div>
-        <button onClick={openAdd} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          <PlusIcon className="w-5 h-5" /> Add Media
-        </button>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Layanan pasien"
+        title="Hiburan"
+        description="Film, musik, buku, dan konten lain untuk mengisi waktu pasien."
+        action={
+          <button onClick={openAdd} className="btn-primary">
+            <Plus className="h-4 w-4" /> Tambah konten
+          </button>
+        }
+      />
 
-      <div className="flex gap-2 mb-5 flex-wrap">
-        <button onClick={() => setFilterCat("")} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${!filterCat ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>All</button>
-        {CATEGORIES.map(c => (
-          <button key={c} onClick={() => setFilterCat(c)} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${filterCat === c ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-            {CAT_ICON[c]} {c}
+      <div className="mb-5 flex flex-wrap gap-2">
+        <button
+          onClick={() => setFilter("")}
+          className={cn(
+            "rounded-full border px-3.5 py-1.5 text-xs font-bold transition",
+            !filter
+              ? "border-brand-500 bg-brand-500 text-white"
+              : "border-line bg-white text-ink-soft hover:border-brand-200 hover:bg-brand-50"
+          )}
+        >
+          Semua
+        </button>
+        {Object.entries(ENTERTAINMENT_CATEGORIES).map(([key, c]) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={cn(
+              "rounded-full border px-3.5 py-1.5 text-xs font-bold transition",
+              filter === key
+                ? "border-brand-500 bg-brand-500 text-white"
+                : "border-line bg-white text-ink-soft hover:border-brand-200 hover:bg-brand-50"
+            )}
+          >
+            {c.label}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {loading ? (
-          <div className="col-span-full text-center text-gray-400 py-12">Loading...</div>
-        ) : contents.length === 0 ? (
-          <div className="col-span-full text-center text-gray-400 py-12">No content yet. Add some!</div>
-        ) : contents.map(c => (
-          <div key={c.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-xs rounded-md font-medium">{CAT_ICON[c.category]} {c.category}</span>
-                {!c.hospital_id && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-bold">GLOBAL</span>}
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white leading-tight">{c.title}</h3>
-              {c.media_url && <a href={c.media_url} target="_blank" className="text-xs text-blue-500 hover:underline mt-1 block truncate">{c.media_url}</a>}
-              <p className="text-xs text-gray-400 mt-1">Order: {c.display_order}</p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center gap-2">
-              <button onClick={() => togglePublish(c)} disabled={!c.hospital_id}
-                className={`text-xs font-semibold px-2 py-1 rounded ${c.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"} disabled:cursor-not-allowed`}>
-                {c.is_published ? "Published" : "Hidden"}
+      {loading ? (
+        <div className="card">
+          <Loading />
+        </div>
+      ) : contents.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            icon={Clapperboard}
+            title="Belum ada konten"
+            hint="Tambahkan tautan film, musik, buku, atau game untuk pasien."
+            action={
+              <button onClick={openAdd} className="btn-primary">
+                <Plus className="h-4 w-4" /> Tambah konten
               </button>
-              {c.hospital_id && (
-                <div className="flex gap-2">
-                  <button onClick={() => openEdit(c)} className="text-sm text-blue-600 hover:underline">Edit</button>
-                  <button onClick={() => handleDelete(c.id)} className="text-sm text-red-500 hover:underline">Del</button>
+            }
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {contents.map((c, i) => {
+            const Icon = ICONS[c.category] ?? Film;
+            return (
+              <article
+                key={c.id}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="group card flex animate-fade-up flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
+              >
+                <div className="relative grid aspect-[16/10] place-items-center overflow-hidden bg-brand-50">
+                  {c.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon className="h-8 w-8 text-brand-300" strokeWidth={1.5} />
+                  )}
+                  {!c.hospital_id && (
+                    <span className="absolute left-3 top-3 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-700">
+                      Global
+                    </span>
+                  )}
+                  <button
+                    onClick={() => togglePublish(c)}
+                    disabled={!c.hospital_id}
+                    className={cn(
+                      "absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-extrabold shadow-sm transition disabled:cursor-not-allowed",
+                      c.is_published ? "bg-brand-500 text-white" : "bg-white text-ink-mute"
+                    )}
+                  >
+                    {c.is_published ? "Tayang" : "Draf"}
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{editTarget ? "Edit Media" : "Add Media"}</h2>
-              <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-500" /></button>
-            </div>
-            {error && <p className="text-red-600 text-sm mb-3 bg-red-50 p-3 rounded-lg">{error}</p>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Title *</label>
-                <input required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Category *</label>
-                  <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="text-[11px] font-bold text-ink-mute">
+                    {ENTERTAINMENT_CATEGORIES[c.category]?.label ?? c.category} · urutan {c.display_order}
+                  </p>
+                  <h2 className="mt-0.5 line-clamp-2 text-sm font-extrabold leading-snug text-ink">{c.title}</h2>
+
+                  {c.hospital_id && (
+                    <div className="mt-auto flex gap-2 pt-4">
+                      <button onClick={() => openEdit(c)} className="btn-ghost flex-1 px-3 py-2 text-xs">
+                        <Pencil className="h-3.5 w-3.5" /> Ubah
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        title="Hapus"
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line text-ink-mute transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Display Order</label>
-                  <input type="number" value={form.display_order} onChange={e => setForm({...form, display_order: Number(e.target.value)})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Media URL</label>
-                <input value={form.media_url} onChange={e => setForm({...form, media_url: e.target.value})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" placeholder="https://..." />
-              </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="epub" checked={form.is_published} onChange={e => setForm({...form, is_published: e.target.checked})} className="w-4 h-4" />
-                <label htmlFor="epub" className="text-sm text-gray-700 dark:text-gray-300">Publish immediately</label>
-              </div>
-              <div className="flex gap-3 justify-end pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving ? "Saving..." : "Save"}</button>
-              </div>
-            </form>
-          </div>
+              </article>
+            );
+          })}
         </div>
       )}
-    </div>
+
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editTarget ? "Ubah konten" : "Tambah konten"}
+      >
+        <FormError>{error}</FormError>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Judul</label>
+            <input
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="field"
+              placeholder="Playlist relaksasi"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Kategori</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className="field"
+              >
+                {Object.entries(ENTERTAINMENT_CATEGORIES).map(([key, c]) => (
+                  <option key={key} value={key}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Urutan tampil</label>
+              <input
+                type="number"
+                value={form.display_order}
+                onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })}
+                className="field"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">URL media</label>
+            <input
+              value={form.media_url}
+              onChange={(e) => setForm({ ...form, media_url: e.target.value })}
+              className="field"
+              placeholder="https://…"
+            />
+          </div>
+
+          <div>
+            <label className="label">URL thumbnail</label>
+            <input
+              value={form.thumbnail_url}
+              onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })}
+              className="field"
+              placeholder="https://…"
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-line p-3">
+            <input
+              type="checkbox"
+              checked={form.is_published}
+              onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+              className="h-4 w-4 accent-brand-500"
+            />
+            <span className="text-sm font-semibold text-ink">Tayangkan di tablet pasien</span>
+          </label>
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
+              Batal
+            </button>
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? "Menyimpan…" : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </PageShell>
   );
 }

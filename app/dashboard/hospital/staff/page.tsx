@@ -1,19 +1,22 @@
+import Link from "next/link";
+import { UserPlus, IdCard } from "lucide-react";
 import { createClient } from "@/src/features/auth/utils/supabase/server";
 import { supabaseAdmin } from "@/src/features/auth/utils/supabase/admin";
-import Link from "next/link";
+import { PageShell, PageHeader, EmptyState } from "@/src/features/shell/components/Page";
+import { cn } from "@/src/lib/utils";
 
 export default async function StaffListPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Get hospital_id from current admin
   const { data: adminProfile } = await supabaseAdmin
     .from("profiles")
     .select("hospital_id")
     .eq("id", user!.id)
     .single();
 
-  // Get all staff in this hospital (excluding the hospital admin)
   const { data: staff } = await supabaseAdmin
     .from("profiles")
     .select("id, full_name, role, created_at")
@@ -22,50 +25,66 @@ export default async function StaffListPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-8 text-gray-900 dark:text-white">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Staff</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">All doctors and nurses in your hospital.</p>
-        </div>
-        <Link
-          href="/dashboard/hospital/staff/create"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          + Add Staff
-        </Link>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Sistem"
+        title="Staf"
+        description="Akun dokter dan perawat yang bisa masuk ke Medly."
+        action={
+          <Link href="/dashboard/hospital/staff/create" className="btn-primary">
+            <UserPlus className="h-4 w-4" /> Tambah staf
+          </Link>
+        }
+      />
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="card overflow-hidden">
         {!staff || staff.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <p className="text-lg font-medium">No staff yet</p>
-            <p className="text-sm mt-1">Add your first doctor or nurse using the button above.</p>
-          </div>
+          <EmptyState
+            icon={IdCard}
+            title="Belum ada akun staf"
+            hint="Buat akun untuk dokter dan perawat agar mereka bisa masuk ke portal masing-masing."
+            action={
+              <Link href="/dashboard/hospital/staff/create" className="btn-primary">
+                <UserPlus className="h-4 w-4" /> Tambah staf
+              </Link>
+            }
+          />
         ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Joined</th>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-line bg-canvas/60">
+                <th className="eyebrow px-6 py-3 font-bold">Nama</th>
+                <th className="eyebrow px-6 py-3 font-bold">Peran</th>
+                <th className="eyebrow px-6 py-3 font-bold">Bergabung</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-line">
               {staff.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{member.full_name}</td>
+                <tr key={member.id} className="transition-colors hover:bg-canvas/70">
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      member.role === "DOCTOR"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                    }`}>
-                      {member.role === "DOCTOR" ? "🩺 Doctor" : "🏥 Nurse"}
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-[11px] font-extrabold text-brand-700">
+                        {member.full_name.slice(0, 2).toUpperCase()}
+                      </span>
+                      <span className="font-bold text-ink">{member.full_name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={cn(
+                        "chip",
+                        member.role === "DOCTOR" ? "bg-brand-50 text-brand-700" : "bg-sky-50 text-sky-700"
+                      )}
+                    >
+                      {member.role === "DOCTOR" ? "Dokter" : "Perawat"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(member.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                  <td className="tabular px-6 py-4 text-ink-soft">
+                    {new Date(member.created_at).toLocaleDateString("id-ID", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </td>
                 </tr>
               ))}
@@ -73,6 +92,6 @@ export default async function StaffListPage() {
           </table>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -16,6 +16,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const allowed = ["name", "description", "meal_type_tags", "is_available", "category_id", "image_url", "price"];
     const updates: any = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
+    // An empty select is "no category", not an empty UUID.
+    if (updates.category_id === "") updates.category_id = null;
     const { data, error } = await supabase.from("meal_menus").update(updates)
       .eq("id", id).eq("hospital_id", hospitalId).is("deleted_at", null).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

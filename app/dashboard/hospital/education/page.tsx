@@ -1,7 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusIcon, X } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  GraduationCap,
+  FileText,
+  Video,
+  File,
+  Image as ImageIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Modal, FormError } from "@/src/features/shell/components/Modal";
+import { EDUCATION_TYPES } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface Content {
   id: string;
@@ -10,11 +24,25 @@ interface Content {
   is_published: boolean;
   hospital_id: string | null;
   media_url: string | null;
+  body_text: string | null;
   education_categories?: { name: string };
 }
 
-const TYPES = ["ARTICLE", "VIDEO", "PDF", "INFOGRAPHIC"];
-const EMPTY_FORM = { title: "", content_type: "ARTICLE", body_text: "", media_url: "", category_id: "", is_published: true };
+const ICONS: Record<string, LucideIcon> = {
+  ARTICLE: FileText,
+  VIDEO: Video,
+  PDF: File,
+  INFOGRAPHIC: ImageIcon,
+};
+
+const EMPTY_FORM = {
+  title: "",
+  content_type: "ARTICLE",
+  body_text: "",
+  media_url: "",
+  category_id: "",
+  is_published: true,
+};
 
 export default function EducationPage() {
   const [contents, setContents] = useState<Content[]>([]);
@@ -25,7 +53,9 @@ export default function EducationPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -34,133 +64,261 @@ export default function EducationPage() {
     setLoading(false);
   }
 
-  function openAdd() { setEditTarget(null); setForm(EMPTY_FORM); setError(""); setShowModal(true); }
+  function openAdd() {
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+    setError("");
+    setShowModal(true);
+  }
+
   function openEdit(c: Content) {
     setEditTarget(c);
-    setForm({ title: c.title, content_type: c.content_type, body_text: "", media_url: c.media_url || "", category_id: "", is_published: c.is_published });
-    setError(""); setShowModal(true);
+    setForm({
+      title: c.title,
+      content_type: c.content_type,
+      // Carry the existing article body into the form — saving without it
+      // would blank the text that patients read.
+      body_text: c.body_text ?? "",
+      media_url: c.media_url ?? "",
+      category_id: "",
+      is_published: c.is_published,
+    });
+    setError("");
+    setShowModal(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true); setError("");
+    setSaving(true);
+    setError("");
     const res = editTarget
-      ? await fetch(`/api/education/${editTarget.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
-      : await fetch("/api/education", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Failed"); setSaving(false); return; }
-    setShowModal(false); load();
+      ? await fetch(`/api/education/${editTarget.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        })
+      : await fetch("/api/education", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
     setSaving(false);
+    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    setShowModal(false);
+    load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this content?")) return;
+    if (!confirm("Hapus konten ini?")) return;
     await fetch(`/api/education/${id}`, { method: "DELETE" });
     load();
   }
 
   async function togglePublish(c: Content) {
-    if (!c.hospital_id) return; // Can't edit global
-    await fetch(`/api/education/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_published: !c.is_published }) });
+    if (!c.hospital_id) return;
+    await fetch(`/api/education/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_published: !c.is_published }),
+    });
     load();
   }
 
-  const TYPE_ICON: Record<string, string> = { ARTICLE: "📄", VIDEO: "🎬", PDF: "📋", INFOGRAPHIC: "🖼️" };
-
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Education Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Health articles and videos for Medly tablets</p>
-        </div>
-        <button onClick={openAdd} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          <PlusIcon className="w-5 h-5" /> Upload Content
-        </button>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Layanan pasien"
+        title="Edukasi"
+        description="Konten yang dipublikasikan tampil di tablet pasien."
+        action={
+          <button onClick={openAdd} className="btn-primary">
+            <Plus className="h-4 w-4" /> Tambah konten
+          </button>
+        }
+      />
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-        <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-800/50">
-            <tr>
-              <th className="px-6 py-4">Title</th>
-              <th className="px-6 py-4">Type</th>
-              <th className="px-6 py-4">Scope</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-6 py-8 text-center">Loading...</td></tr>
-            ) : contents.length === 0 ? (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400">No content yet</td></tr>
-            ) : contents.map(c => (
-              <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{TYPE_ICON[c.content_type]} {c.title}</td>
-                <td className="px-6 py-4">{c.content_type}</td>
-                <td className="px-6 py-4">
-                  {c.hospital_id ? <span className="text-blue-600 text-xs font-bold">LOCAL</span> : <span className="text-purple-600 text-xs font-bold">GLOBAL</span>}
-                </td>
-                <td className="px-6 py-4">
-                  <button onClick={() => togglePublish(c)} disabled={!c.hospital_id}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md ${c.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"} disabled:cursor-not-allowed`}>
-                    {c.is_published ? "Published" : "Draft"}
-                  </button>
-                </td>
-                <td className="px-6 py-4 text-right flex gap-3 justify-end">
-                  {c.hospital_id && <>
-                    <button onClick={() => openEdit(c)} className="text-blue-600 hover:underline">Edit</button>
-                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Delete</button>
-                  </>}
-                </td>
+      <div className="card overflow-hidden">
+        {loading ? (
+          <Loading />
+        ) : contents.length === 0 ? (
+          <EmptyState
+            icon={GraduationCap}
+            title="Belum ada konten edukasi"
+            hint="Tambahkan artikel, video, atau infografik yang relevan dengan pasien Anda."
+            action={
+              <button onClick={openAdd} className="btn-primary">
+                <Plus className="h-4 w-4" /> Tambah konten
+              </button>
+            }
+          />
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-line bg-canvas/60">
+                <th className="eyebrow px-6 py-3 font-bold">Judul</th>
+                <th className="eyebrow px-6 py-3 font-bold">Jenis</th>
+                <th className="eyebrow px-6 py-3 font-bold">Sumber</th>
+                <th className="eyebrow px-6 py-3 font-bold">Status</th>
+                <th className="eyebrow px-6 py-3 text-right font-bold">Aksi</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {contents.map((c) => {
+                const Icon = ICONS[c.content_type] ?? FileText;
+                return (
+                  <tr key={c.id} className="group transition-colors hover:bg-canvas/70">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                          <Icon className="h-4 w-4" strokeWidth={2.1} />
+                        </span>
+                        <span className="font-bold text-ink">{c.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-ink-soft">
+                      {EDUCATION_TYPES[c.content_type]?.label ?? c.content_type}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={cn(
+                          "chip",
+                          c.hospital_id ? "bg-canvas text-ink-soft" : "bg-violet-50 text-violet-700"
+                        )}
+                      >
+                        {c.hospital_id ? "Rumah sakit" : "Global"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => togglePublish(c)}
+                        disabled={!c.hospital_id}
+                        title={c.hospital_id ? "Klik untuk mengubah" : "Konten global tidak dapat diubah"}
+                        className={cn(
+                          "chip transition disabled:cursor-not-allowed disabled:opacity-60",
+                          c.is_published ? "bg-brand-50 text-brand-700" : "bg-canvas text-ink-mute"
+                        )}
+                      >
+                        {c.is_published ? "Tayang" : "Draf"}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4">
+                      {c.hospital_id && (
+                        <div className="flex items-center justify-end gap-1 opacity-0 transition group-hover:opacity-100">
+                          <button
+                            onClick={() => openEdit(c)}
+                            title="Ubah"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-white hover:text-ink"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            title="Hapus"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{editTarget ? "Edit Content" : "Upload Content"}</h2>
-              <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-500" /></button>
-            </div>
-            {error && <p className="text-red-600 text-sm mb-3 bg-red-50 p-3 rounded-lg">{error}</p>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Title *</label>
-                <input required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Content Type *</label>
-                <select value={form.content_type} onChange={e => setForm({...form, content_type: e.target.value})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
-                  {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Media URL {form.content_type !== "ARTICLE" ? "*" : "(optional)"}</label>
-                <input value={form.media_url} onChange={e => setForm({...form, media_url: e.target.value})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" placeholder="https://..." />
-              </div>
-              {form.content_type === "ARTICLE" && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Article Body</label>
-                  <textarea value={form.body_text} onChange={e => setForm({...form, body_text: e.target.value})} rows={4} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="pub" checked={form.is_published} onChange={e => setForm({...form, is_published: e.target.checked})} className="w-4 h-4" />
-                <label htmlFor="pub" className="text-sm text-gray-700 dark:text-gray-300">Publish immediately</label>
-              </div>
-              <div className="flex gap-3 justify-end pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving ? "Saving..." : "Save"}</button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editTarget ? "Ubah konten" : "Tambah konten"}
+        width="max-w-lg"
+      >
+        <FormError>{error}</FormError>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Judul</label>
+            <input
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="field"
+              placeholder="Tips pemulihan pasca operasi"
+            />
           </div>
-        </div>
-      )}
-    </div>
+
+          <div>
+            <span className="label">Jenis konten</span>
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(EDUCATION_TYPES).map(([key, t]) => {
+                const Icon = ICONS[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setForm({ ...form, content_type: key })}
+                    aria-pressed={form.content_type === key}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border py-3 text-[11px] font-bold transition active:scale-[0.97]",
+                      form.content_type === key
+                        ? "border-brand-500 bg-brand-500 text-white"
+                        : "border-line bg-white text-ink-soft hover:border-brand-200 hover:bg-brand-50"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" strokeWidth={2.1} />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="label">
+              URL media {form.content_type === "ARTICLE" ? "(opsional)" : ""}
+            </label>
+            <input
+              value={form.media_url}
+              onChange={(e) => setForm({ ...form, media_url: e.target.value })}
+              className="field"
+              placeholder="https://…"
+            />
+          </div>
+
+          <div>
+            <label className="label">
+              Isi {form.content_type === "ARTICLE" ? "artikel" : "keterangan"}
+            </label>
+            <textarea
+              value={form.body_text}
+              onChange={(e) => setForm({ ...form, body_text: e.target.value })}
+              rows={form.content_type === "ARTICLE" ? 5 : 3}
+              className="field resize-none"
+              placeholder="Tulis dengan bahasa yang mudah dipahami pasien…"
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-line p-3">
+            <input
+              type="checkbox"
+              checked={form.is_published}
+              onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+              className="h-4 w-4 accent-brand-500"
+            />
+            <span className="text-sm font-semibold text-ink">Tayangkan di tablet pasien</span>
+          </label>
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
+              Batal
+            </button>
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? "Menyimpan…" : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </PageShell>
   );
 }

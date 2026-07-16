@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { FileText, Video, File, Image as ImageIcon, X } from "lucide-react";
+import { FileText, Video, File, Image as ImageIcon, ExternalLink, type LucideIcon } from "lucide-react";
+import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { Modal } from "@/src/features/shell/components/Modal";
+import { EDUCATION_TYPES } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface Content {
   id: string;
@@ -13,7 +17,7 @@ interface Content {
   education_categories?: { name: string } | null;
 }
 
-const TYPE_ICONS: Record<string, any> = {
+const ICONS: Record<string, LucideIcon> = {
   ARTICLE: FileText,
   VIDEO: Video,
   PDF: File,
@@ -24,88 +28,107 @@ export default function EducationPage() {
   const { admissionId } = useParams<{ admissionId: string }>();
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Content | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [filter, setFilter] = useState("ALL");
+  const [open, setOpen] = useState<Content | null>(null);
 
   useEffect(() => {
     fetch(`/api/patient/education?admission_id=${admissionId}`)
-      .then((res) => (res.ok ? res.json() : []))
+      .then((r) => (r.ok ? r.json() : []))
       .then(setContents)
       .finally(() => setLoading(false));
   }, [admissionId]);
 
-  const categories = ["ALL", ...Array.from(new Set(contents.map((c) => c.education_categories?.name).filter(Boolean)))] as string[];
-  const filtered = categoryFilter === "ALL" ? contents : contents.filter((c) => c.education_categories?.name === categoryFilter);
+  if (loading) return <BedsideLoading />;
 
-  if (loading) return <div className="text-gray-500">Memuat...</div>;
+  const categories = Array.from(
+    new Set(contents.map((c) => c.education_categories?.name).filter(Boolean))
+  ) as string[];
+  const shown = filter === "ALL" ? contents : contents.filter((c) => c.education_categories?.name === filter);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Edukasi Kesehatan</h2>
+    <div className="space-y-4">
+      <BedsideHeader
+        title="Edukasi Kesehatan"
+        description="Materi dari tim medis untuk membantu pemulihan Anda."
+      />
 
-        {categories.length > 1 && (
-          <div className="flex gap-2 mb-5 flex-wrap">
-            {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategoryFilter(c)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  categoryFilter === c ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-              >
-                {c === "ALL" ? "Semua" : c}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {filtered.length === 0 ? (
-          <p className="text-sm text-gray-400">Belum ada konten edukasi.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filtered.map((c) => {
-              const Icon = TYPE_ICONS[c.content_type] || FileText;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setSelected(c)}
-                  className="flex items-start gap-3 text-left border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
-                >
-                  <Icon className="w-6 h-6 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm text-gray-900 dark:text-white">{c.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{c.content_type} {c.education_categories?.name ? `— ${c.education_categories.name}` : ""}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-xl">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{selected.title}</h2>
-              <button onClick={() => setSelected(null)}><X className="w-5 h-5 text-gray-500" /></button>
-            </div>
-            {selected.content_type === "VIDEO" && selected.media_url && (
-              <video controls className="w-full rounded-lg mb-4" src={selected.media_url} />
-            )}
-            {selected.content_type === "INFOGRAPHIC" && selected.media_url && (
-              <img src={selected.media_url} alt={selected.title} className="w-full rounded-lg mb-4" />
-            )}
-            {selected.content_type === "PDF" && selected.media_url && (
-              <a href={selected.media_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
-                Buka dokumen PDF →
-              </a>
-            )}
-            {selected.body_text && <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.body_text}</p>}
-          </div>
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {["ALL", ...categories].map((c) => (
+            <button
+              key={c}
+              onClick={() => setFilter(c)}
+              className={cn(
+                "rounded-full border px-4 py-2 text-xs font-bold transition duration-200",
+                filter === c
+                  ? "border-brand-500 bg-brand-500 text-white shadow-sm shadow-brand-500/25"
+                  : "border-line bg-white text-ink-soft hover:border-brand-200 hover:bg-brand-50"
+              )}
+            >
+              {c === "ALL" ? "Semua" : c}
+            </button>
+          ))}
         </div>
       )}
+
+      {shown.length === 0 ? (
+        <BedsideCard>
+          <BedsideEmpty>Belum ada konten edukasi.</BedsideEmpty>
+        </BedsideCard>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map((c, i) => {
+            const Icon = ICONS[c.content_type] ?? FileText;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setOpen(c)}
+                style={{ animationDelay: `${i * 45}ms` }}
+                className="group card flex animate-fade-up items-start gap-4 p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 transition-transform duration-200 group-hover:scale-105">
+                  <Icon className="h-5 w-5" strokeWidth={2} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-extrabold leading-snug text-ink">{c.title}</span>
+                  <span className="mt-1 block text-xs text-ink-mute">
+                    {EDUCATION_TYPES[c.content_type]?.label ?? c.content_type}
+                    {c.education_categories?.name ? ` · ${c.education_categories.name}` : ""}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <Modal
+        open={!!open}
+        onClose={() => setOpen(null)}
+        title={open?.title ?? ""}
+        description={open ? EDUCATION_TYPES[open.content_type]?.label : undefined}
+        width="max-w-2xl"
+      >
+        {open && (
+          <div className="space-y-4">
+            {open.content_type === "VIDEO" && open.media_url && (
+              <video controls className="w-full rounded-2xl bg-ink" src={open.media_url} />
+            )}
+            {open.content_type === "INFOGRAPHIC" && open.media_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={open.media_url} alt={open.title} className="w-full rounded-2xl" />
+            )}
+            {open.content_type === "PDF" && open.media_url && (
+              <a href={open.media_url} target="_blank" rel="noopener noreferrer" className="btn-ghost w-full">
+                Buka dokumen <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
+            {open.body_text && (
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{open.body_text}</p>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

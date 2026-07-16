@@ -1,8 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  ChevronLeft,
+  MonitorPlay,
+  Pencil,
+  Plus,
+  Check,
+  Activity,
+  UserPlus,
+  Trash2,
+} from "lucide-react";
+import { PageShell, Loading } from "@/src/features/shell/components/Page";
+import { Modal, FormError } from "@/src/features/shell/components/Modal";
+import { ADMISSION_STATUS } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface Admission {
   id: string;
@@ -11,18 +25,30 @@ interface Admission {
   discharge_date: string | null;
   room_id: string | null;
   primary_diagnosis?: string | null;
-  rooms?: { room_number: string; ward_name: string };
+  rooms?: { room_number: string; ward_name: string } | null;
 }
-
 interface Doctor {
   id: string;
   full_name: string;
   specialization: string | null;
 }
-
-interface Room { id: string; room_number: string; ward_name: string; status: string; }
-
-interface ChecklistItem { id: string; title: string; target_date: string | null; is_done: boolean; }
+interface Assignment {
+  id: string;
+  role: string;
+  doctors?: Doctor | null;
+}
+interface Room {
+  id: string;
+  room_number: string;
+  ward_name: string;
+  status: string;
+}
+interface ChecklistItem {
+  id: string;
+  title: string;
+  target_date: string | null;
+  is_done: boolean;
+}
 interface RecoveryProgress {
   id: string;
   estimated_total_days: number | null;
@@ -30,341 +56,709 @@ interface RecoveryProgress {
   notes: string | null;
   recovery_checklist_items: ChecklistItem[];
 }
+interface Vital {
+  id: string;
+  measured_at: string;
+  blood_pressure_systolic: number | null;
+  blood_pressure_diastolic: number | null;
+  heart_rate: number | null;
+  temperature_celsius: number | null;
+  oxygen_saturation: number | null;
+}
+
+const EMPTY_VITALS = {
+  blood_pressure_systolic: "",
+  blood_pressure_diastolic: "",
+  heart_rate: "",
+  temperature_celsius: "",
+  respiratory_rate: "",
+  oxygen_saturation: "",
+};
+
+function Panel({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <section className="card p-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="eyebrow">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default function PatientDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+  const { id } = useParams<{ id: string }>();
 
   const [patient, setPatient] = useState<any>(null);
   const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [recovery, setRecovery] = useState<RecoveryProgress | null>(null);
+  const [vitals, setVitals] = useState<Vital[]>([]);
   const [loading, setLoading] = useState(true);
-  const [assigning, setAssigning] = useState(false);
+
   const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
-  const [statusUpdating, setStatusUpdating] = useState(false);
   const [diagnosis, setDiagnosis] = useState("");
-  const [savingDiagnosis, setSavingDiagnosis] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [savedFlag, setSavedFlag] = useState<string | null>(null);
 
-  const [recovery, setRecovery] = useState<RecoveryProgress | null>(null);
-  const [recoveryLoaded, setRecoveryLoaded] = useState(false);
   const [estimatedDays, setEstimatedDays] = useState("");
   const [currentDay, setCurrentDay] = useState("");
   const [recoveryNotes, setRecoveryNotes] = useState("");
-  const [savingRecovery, setSavingRecovery] = useState(false);
-  const [newChecklistTitle, setNewChecklistTitle] = useState("");
+  const [newTask, setNewTask] = useState("");
 
-  useEffect(() => {
-    if (id) loadAll();
-  }, [id]);
+  const [showVitals, setShowVitals] = useState(false);
+  const [vitalsForm, setVitalsForm] = useState(EMPTY_VITALS);
+  const [vitalsError, setVitalsError] = useState("");
 
-  async function loadAll() {
-    setLoading(true);
-    const [pRes, aRes, dRes, rRes] = await Promise.all([
-      fetch(`/api/patients/${id}`),
-      fetch(`/api/patient-admissions?patient_id=${id}`),
-      fetch(`/api/doctors`),
-      fetch(`/api/rooms`),
+  const activeAdmission = admissions.find((a) => a.status === "ACTIVE");
+
+  const flash = (key: string) => {
+    setSavedFlag(key);
+    setTimeout(() => setSavedFlag(null), 2000);
+  };
+
+  const loadExtras = useCallback(async (admissionId: string) => {
+    const [rRes, aRes, vRes] = await Promise.all([
+      fetch(`/api/recovery-progress?admission_id=${admissionId}`),
+      fetch(`/api/patient-doctor-assignments?admission_id=${admissionId}`),
+      fetch(`/api/vitals?admission_id=${admissionId}`),
     ]);
-    if (pRes.ok) setPatient(await pRes.json());
-    let loadedAdmissions: Admission[] = [];
-    if (aRes.ok) { loadedAdmissions = await aRes.json(); setAdmissions(loadedAdmissions); }
-    if (dRes.ok) setDoctors(await dRes.json());
-    if (rRes.ok) setRooms(await rRes.json());
-    setLoading(false);
-
-    const active = loadedAdmissions.find(a => a.status === "ACTIVE") as any;
-    if (active) {
-      setDiagnosis(active.primary_diagnosis || "");
-      loadRecovery(active.id);
-    }
-  }
-
-  async function loadRecovery(admissionId: string) {
-    const res = await fetch(`/api/recovery-progress?admission_id=${admissionId}`);
-    if (res.ok) {
-      const data = await res.json();
+    if (rRes.ok) {
+      const data = await rRes.json();
       setRecovery(data);
       if (data) {
         setEstimatedDays(String(data.estimated_total_days ?? ""));
         setCurrentDay(String(data.current_day ?? 1));
-        setRecoveryNotes(data.notes || "");
+        setRecoveryNotes(data.notes ?? "");
       }
     }
-    setRecoveryLoaded(true);
-  }
+    if (aRes.ok) setAssignments(await aRes.json());
+    if (vRes.ok) setVitals(await vRes.json());
+  }, []);
 
-  const activeAdmission = admissions.find(a => a.status === "ACTIVE");
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    const [pRes, aRes, dRes, rRes] = await Promise.all([
+      fetch(`/api/patients/${id}`),
+      fetch(`/api/patient-admissions?patient_id=${id}`),
+      fetch("/api/doctors"),
+      fetch("/api/rooms"),
+    ]);
+    if (pRes.ok) setPatient(await pRes.json());
+    let list: Admission[] = [];
+    if (aRes.ok) {
+      list = await aRes.json();
+      setAdmissions(list);
+    }
+    if (dRes.ok) setDoctors(await dRes.json());
+    if (rRes.ok) setRooms(await rRes.json());
+    setLoading(false);
 
-  async function handleSaveDiagnosis() {
-    if (!activeAdmission) return;
-    setSavingDiagnosis(true);
-    await fetch(`/api/patient-admissions/${activeAdmission.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ primary_diagnosis: diagnosis }),
-    });
-    setSavingDiagnosis(false);
-  }
+    const active = list.find((a) => a.status === "ACTIVE");
+    if (active) {
+      setDiagnosis(active.primary_diagnosis ?? "");
+      loadExtras(active.id);
+    } else {
+      setRecovery(null);
+      setAssignments([]);
+      setVitals([]);
+    }
+  }, [id, loadExtras]);
 
-  async function handleCreateRecovery() {
-    if (!activeAdmission) return;
-    setSavingRecovery(true);
-    const res = await fetch("/api/recovery-progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        admission_id: activeAdmission.id,
-        estimated_total_days: estimatedDays ? Number(estimatedDays) : null,
-        current_day: currentDay ? Number(currentDay) : 1,
-        notes: recoveryNotes || null,
-      }),
-    });
-    setSavingRecovery(false);
-    if (res.ok) loadRecovery(activeAdmission.id);
-    else { const d = await res.json(); alert(d.error); }
-  }
+  useEffect(() => {
+    if (id) loadAll();
+  }, [id, loadAll]);
 
-  async function handleUpdateRecovery() {
-    if (!recovery) return;
-    setSavingRecovery(true);
-    await fetch(`/api/recovery-progress/${recovery.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        estimated_total_days: estimatedDays ? Number(estimatedDays) : null,
-        current_day: currentDay ? Number(currentDay) : 1,
-        notes: recoveryNotes || null,
-      }),
-    });
-    setSavingRecovery(false);
-    if (activeAdmission) loadRecovery(activeAdmission.id);
-  }
-
-  async function handleAddChecklistItem() {
-    if (!recovery || !newChecklistTitle.trim()) return;
-    await fetch("/api/recovery-checklist-items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recovery_progress_id: recovery.id, title: newChecklistTitle.trim() }),
-    });
-    setNewChecklistTitle("");
-    if (activeAdmission) loadRecovery(activeAdmission.id);
-  }
-
-  async function handleToggleChecklistItem(item: ChecklistItem) {
-    await fetch(`/api/recovery-checklist-items/${item.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_done: !item.is_done }),
-    });
-    if (activeAdmission) loadRecovery(activeAdmission.id);
-  }
-
-  async function handleAdmit() {
-    setAssigning(true);
+  async function admit() {
+    setBusy("admit");
     const res = await fetch("/api/patient-admissions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ patient_id: id, room_id: selectedRoom || null }),
     });
-    if (res.ok) loadAll();
-    else { const d = await res.json(); alert(d.error); }
-    setAssigning(false);
-  }
-
-  async function handleStatusChange(admissionId: string, status: string) {
-    setStatusUpdating(true);
-    await fetch(`/api/patient-admissions/${admissionId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setStatusUpdating(false);
+    setBusy(null);
+    if (!res.ok) return alert((await res.json()).error);
+    setSelectedRoom("");
     loadAll();
   }
 
-  async function handleAssignDoctor() {
+  async function patchAdmission(payload: Record<string, unknown>, key: string) {
+    if (!activeAdmission) return;
+    setBusy(key);
+    const res = await fetch(`/api/patient-admissions/${activeAdmission.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setBusy(null);
+    if (!res.ok) return alert((await res.json()).error);
+    flash(key);
+    loadAll();
+  }
+
+  async function assignDoctor() {
     if (!activeAdmission || !selectedDoctor) return;
+    setBusy("doctor");
     const res = await fetch("/api/patient-doctor-assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ admission_id: activeAdmission.id, doctor_id: selectedDoctor }),
     });
-    const d = await res.json();
-    if (!res.ok) alert(d.error);
+    setBusy(null);
+    if (!res.ok) return alert((await res.json()).error);
     setSelectedDoctor("");
+    loadExtras(activeAdmission.id);
   }
 
-  if (loading) return <div className="p-8 text-gray-500">Loading patient...</div>;
-  if (!patient) return <div className="p-8 text-red-500">Patient not found.</div>;
+  async function unassignDoctor(assignmentId: string) {
+    if (!activeAdmission) return;
+    await fetch(`/api/patient-doctor-assignments/${assignmentId}`, { method: "DELETE" });
+    loadExtras(activeAdmission.id);
+  }
+
+  async function saveRecovery() {
+    if (!activeAdmission) return;
+    setBusy("recovery");
+    const payload = {
+      estimated_total_days: estimatedDays ? Number(estimatedDays) : null,
+      current_day: currentDay ? Number(currentDay) : 1,
+      notes: recoveryNotes || null,
+    };
+    const res = recovery
+      ? await fetch(`/api/recovery-progress/${recovery.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/recovery-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ admission_id: activeAdmission.id, ...payload }),
+        });
+    setBusy(null);
+    if (!res.ok) return alert((await res.json()).error);
+    flash("recovery");
+    loadExtras(activeAdmission.id);
+  }
+
+  async function addTask() {
+    if (!recovery || !newTask.trim() || !activeAdmission) return;
+    await fetch("/api/recovery-checklist-items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recovery_progress_id: recovery.id, title: newTask.trim() }),
+    });
+    setNewTask("");
+    loadExtras(activeAdmission.id);
+  }
+
+  async function toggleTask(item: ChecklistItem) {
+    if (!activeAdmission) return;
+    await fetch(`/api/recovery-checklist-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_done: !item.is_done }),
+    });
+    loadExtras(activeAdmission.id);
+  }
+
+  async function saveVitals(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activeAdmission) return;
+    setBusy("vitals");
+    setVitalsError("");
+    const res = await fetch("/api/vitals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ admission_id: activeAdmission.id, ...vitalsForm }),
+    });
+    setBusy(null);
+    if (!res.ok) return setVitalsError((await res.json()).error ?? "Gagal menyimpan");
+    setShowVitals(false);
+    setVitalsForm(EMPTY_VITALS);
+    loadExtras(activeAdmission.id);
+  }
+
+  if (loading) return <PageShell><Loading label="Memuat pasien…" /></PageShell>;
+  if (!patient)
+    return (
+      <PageShell>
+        <p className="text-sm font-semibold text-red-600">Pasien tidak ditemukan.</p>
+      </PageShell>
+    );
+
+  const latest = vitals[0];
+  const st = activeAdmission ? ADMISSION_STATUS[activeAdmission.status] : null;
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/dashboard/hospital/patients" className="text-sm text-gray-500 hover:underline">← Patients</Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium text-gray-900 dark:text-white">{patient.full_name}</span>
-      </div>
+    <PageShell>
+      <Link
+        href="/dashboard/hospital/patients"
+        className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-ink-soft transition hover:text-brand-600"
+      >
+        <ChevronLeft className="h-4 w-4" /> Semua pasien
+      </Link>
 
-      {/* Patient Info */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 mb-6">
-        <div className="flex justify-between items-start">
+      {/* Identity */}
+      <div className="card mb-4 flex flex-wrap items-start justify-between gap-5 p-6">
+        <div className="flex items-center gap-4">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand-50 text-sm font-extrabold text-brand-700">
+            {patient.full_name.slice(0, 2).toUpperCase()}
+          </span>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{patient.full_name}</h1>
-            <p className="text-sm text-gray-500 mt-1">MRN: <span className="font-mono">{patient.mrn}</span></p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-ink">{patient.full_name}</h1>
+            <p className="tabular mt-0.5 text-sm text-ink-soft">
+              MRN {patient.mrn}
+              {patient.dob ? ` · ${new Date(patient.dob).toLocaleDateString("id-ID")}` : ""}
+              {patient.gender ? ` · ${patient.gender === "male" ? "Laki-laki" : "Perempuan"}` : ""}
+            </p>
+            {st && <span className={cn("chip mt-2", st.chip)}>{st.label}</span>}
           </div>
-          <Link href={`/dashboard/hospital/patients/${id}/edit`} className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-            Edit Patient
+        </div>
+
+        <div className="flex gap-2">
+          {activeAdmission && (
+            <a href={`/patient/${activeAdmission.id}`} target="_blank" rel="noopener noreferrer" className="btn-primary">
+              <MonitorPlay className="h-4 w-4" /> Tampilkan layar pasien
+            </a>
+          )}
+          <Link href={`/dashboard/hospital/patients/${id}/edit`} className="btn-ghost">
+            <Pencil className="h-4 w-4" /> Ubah
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <div><p className="text-xs text-gray-500">Date of Birth</p><p className="font-medium text-sm">{patient.dob || "-"}</p></div>
-          <div><p className="text-xs text-gray-500">Gender</p><p className="font-medium text-sm capitalize">{patient.gender || "-"}</p></div>
-          <div><p className="text-xs text-gray-500">Contact</p><p className="font-medium text-sm">{patient.contact_number || "-"}</p></div>
-          <div><p className="text-xs text-gray-500">Emergency Contact</p><p className="font-medium text-sm">{patient.emergency_contact || "-"}</p></div>
-        </div>
       </div>
 
-      {/* Admission Status */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Admission Status</h2>
-        {activeAdmission ? (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">ACTIVE</span>
-              <span className="text-sm text-gray-500">Room: <strong>{activeAdmission.rooms?.room_number || "Unassigned"}</strong></span>
-              <span className="text-sm text-gray-500">Ward: <strong>{activeAdmission.rooms?.ward_name || "-"}</strong></span>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              {["DISCHARGED", "TRANSFERRED", "DECEASED"].map(s => (
-                <button key={s} onClick={() => handleStatusChange(activeAdmission.id, s)} disabled={statusUpdating}
-                  className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
-                  Mark as {s}
-                </button>
-              ))}
-            </div>
-            {/* Move Room */}
-            <div className="mt-4 flex gap-3 items-center">
-              <select value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)} className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
-                <option value="">Move to different room...</option>
-                {rooms.filter(r => r.status !== "MAINTENANCE").map(r => (
-                  <option key={r.id} value={r.id}>Room {r.room_number} — {r.ward_name}</option>
-                ))}
-              </select>
-              <button onClick={() => handleStatusChange(activeAdmission.id, "ACTIVE")} disabled={!selectedRoom || assigning}
-                className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                Move Room
-              </button>
-            </div>
-            {/* Diagnosis */}
-            <div className="mt-4 flex gap-3 items-center">
-              <input
-                type="text" placeholder="Diagnosa utama..."
-                value={diagnosis} onChange={e => setDiagnosis(e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
-              />
-              <button onClick={handleSaveDiagnosis} disabled={savingDiagnosis}
-                className="px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
-                {savingDiagnosis ? "..." : "Simpan Diagnosa"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="text-sm text-gray-500 mb-4">This patient has no active admission.</p>
-            <div className="flex gap-3 items-center">
-              <select value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)} className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
-                <option value="">Select room (optional)...</option>
-                {rooms.filter(r => r.status !== "MAINTENANCE").map(r => (
-                  <option key={r.id} value={r.id}>Room {r.room_number} — {r.ward_name}</option>
-                ))}
-              </select>
-              <button onClick={handleAdmit} disabled={assigning}
-                className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50">
-                {assigning ? "Admitting..." : "Admit Patient"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Admission */}
+        <Panel title="Status rawat inap">
+          {activeAdmission ? (
+            <div className="space-y-4">
+              <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-canvas p-4 text-sm">
+                <div>
+                  <dt className="text-xs font-semibold text-ink-mute">Kamar</dt>
+                  <dd className="mt-0.5 font-extrabold text-ink">
+                    {activeAdmission.rooms?.room_number ?? "Belum ditentukan"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-ink-mute">Bangsal</dt>
+                  <dd className="mt-0.5 font-extrabold text-ink">{activeAdmission.rooms?.ward_name ?? "—"}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs font-semibold text-ink-mute">Masuk sejak</dt>
+                  <dd className="tabular mt-0.5 font-extrabold text-ink">
+                    {new Date(activeAdmission.admission_date).toLocaleString("id-ID", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </dd>
+                </div>
+              </dl>
 
-      {/* Assign Doctor */}
-      {activeAdmission && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Assign Doctor</h2>
-          <div className="flex gap-3 items-center">
-            <select value={selectedDoctor} onChange={e => setSelectedDoctor(e.target.value)} className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm flex-1">
-              <option value="">Select a doctor...</option>
-              {doctors.map(d => <option key={d.id} value={d.id}>{d.full_name} {d.specialization ? `— ${d.specialization}` : ""}</option>)}
-            </select>
-            <button onClick={handleAssignDoctor} disabled={!selectedDoctor}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              Assign
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Recovery Progress */}
-      {activeAdmission && recoveryLoaded && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 mt-6">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Recovery Progress</h2>
-          <div className="flex gap-3 items-end flex-wrap">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Hari ke-</label>
-              <input type="number" min={1} value={currentDay} onChange={e => setCurrentDay(e.target.value)}
-                className="w-24 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Estimasi Total Hari</label>
-              <input type="number" min={1} value={estimatedDays} onChange={e => setEstimatedDays(e.target.value)}
-                className="w-32 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-gray-500 mb-1">Catatan</label>
-              <input type="text" value={recoveryNotes} onChange={e => setRecoveryNotes(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-            </div>
-            <button
-              onClick={recovery ? handleUpdateRecovery : handleCreateRecovery}
-              disabled={savingRecovery}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {savingRecovery ? "..." : recovery ? "Update" : "Mulai Tracking"}
-            </button>
-          </div>
-
-          {recovery && (
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Checklist Aktivitas</h3>
-              <div className="space-y-2 mb-3">
-                {(recovery.recovery_checklist_items || []).map(item => (
-                  <label key={item.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={item.is_done} onChange={() => handleToggleChecklistItem(item)} className="w-4 h-4" />
-                    <span className={item.is_done ? "line-through text-gray-400" : ""}>{item.title}</span>
-                  </label>
-                ))}
-                {(recovery.recovery_checklist_items || []).length === 0 && (
-                  <p className="text-sm text-gray-400">Belum ada target aktivitas.</p>
-                )}
+              <div>
+                <label className="label">Diagnosa utama</label>
+                <div className="flex gap-2">
+                  <input
+                    value={diagnosis}
+                    onChange={(e) => setDiagnosis(e.target.value)}
+                    className="field"
+                    placeholder="mis. Demam Berdarah Dengue"
+                  />
+                  <button
+                    onClick={() => patchAdmission({ primary_diagnosis: diagnosis }, "diagnosis")}
+                    disabled={busy === "diagnosis"}
+                    className="btn-ghost shrink-0"
+                  >
+                    {savedFlag === "diagnosis" ? <Check className="h-4 w-4 text-brand-600" /> : "Simpan"}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-ink-mute">Tampil di layar pasien.</p>
               </div>
+
+              <div>
+                <label className="label">Pindah kamar</label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedRoom}
+                    onChange={(e) => setSelectedRoom(e.target.value)}
+                    className="field"
+                  >
+                    <option value="">Pilih kamar tujuan…</option>
+                    {rooms
+                      .filter((r) => r.status !== "MAINTENANCE" && r.id !== activeAdmission.room_id)
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.room_number} — {r.ward_name}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    onClick={() => patchAdmission({ room_id: selectedRoom }, "room")}
+                    disabled={!selectedRoom || busy === "room"}
+                    className="btn-ghost shrink-0"
+                  >
+                    Pindahkan
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-line pt-4">
+                <p className="label">Akhiri perawatan</p>
+                <div className="flex flex-wrap gap-2">
+                  {(["DISCHARGED", "TRANSFERRED", "DECEASED"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() =>
+                        confirm(`Tandai pasien sebagai ${ADMISSION_STATUS[s].label}?`) &&
+                        patchAdmission({ status: s }, s)
+                      }
+                      disabled={busy === s}
+                      className="rounded-xl border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                    >
+                      {ADMISSION_STATUS[s].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="mb-4 text-sm text-ink-soft">
+                Pasien ini belum punya admisi aktif. Layar Medly baru bisa dibuka setelah pasien dirawat.
+              </p>
               <div className="flex gap-2">
-                <input
-                  type="text" placeholder="Tambah target aktivitas..."
-                  value={newChecklistTitle} onChange={e => setNewChecklistTitle(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
-                />
-                <button onClick={handleAddChecklistItem} className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                  Tambah
+                <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="field">
+                  <option value="">Pilih kamar (opsional)…</option>
+                  {rooms
+                    .filter((r) => r.status !== "MAINTENANCE")
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.room_number} — {r.ward_name}
+                      </option>
+                    ))}
+                </select>
+                <button onClick={admit} disabled={busy === "admit"} className="btn-primary shrink-0">
+                  {busy === "admit" ? "Memproses…" : "Rawat inap"}
                 </button>
               </div>
             </div>
           )}
-        </div>
-      )}
-    </div>
+        </Panel>
+
+        {/* Care team */}
+        <Panel title="Tim dokter">
+          {!activeAdmission ? (
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat.</p>
+          ) : (
+            <div className="space-y-4">
+              {assignments.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-mute">
+                  Belum ada dokter yang ditugaskan.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {assignments.map((a) => (
+                    <li
+                      key={a.id}
+                      className="group flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-[11px] font-extrabold text-brand-700">
+                        {(a.doctors?.full_name ?? "?").replace(/^dr\.?\s*/i, "").slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-extrabold text-ink">{a.doctors?.full_name}</p>
+                        <p className="truncate text-xs text-ink-mute">
+                          {a.doctors?.specialization ?? "Umum"} ·{" "}
+                          {a.role === "MAIN_DOCTOR" ? "DPJP" : "Konsulen"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => unassignDoctor(a.id)}
+                        title="Lepas penugasan"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="flex gap-2">
+                <select
+                  value={selectedDoctor}
+                  onChange={(e) => setSelectedDoctor(e.target.value)}
+                  className="field"
+                >
+                  <option value="">Tugaskan dokter…</option>
+                  {doctors
+                    .filter((d) => !assignments.some((a) => a.doctors?.id === d.id))
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.full_name}
+                        {d.specialization ? ` — ${d.specialization}` : ""}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  onClick={assignDoctor}
+                  disabled={!selectedDoctor || busy === "doctor"}
+                  className="btn-ghost shrink-0"
+                >
+                  <UserPlus className="h-4 w-4" /> Tugaskan
+                </button>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        {/* Vitals */}
+        <Panel
+          title="Vital sign"
+          action={
+            activeAdmission && (
+              <button onClick={() => setShowVitals(true)} className="btn-ghost px-3 py-1.5 text-xs">
+                <Plus className="h-3.5 w-3.5" /> Catat
+              </button>
+            )
+          }
+        >
+          {!activeAdmission ? (
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat.</p>
+          ) : !latest ? (
+            <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-mute">
+              Belum ada pengukuran. Yang dicatat di sini tampil di layar pasien.
+            </p>
+          ) : (
+            <div>
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  {
+                    label: "TD",
+                    value:
+                      latest.blood_pressure_systolic && latest.blood_pressure_diastolic
+                        ? `${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`
+                        : "—",
+                  },
+                  { label: "Nadi", value: latest.heart_rate ?? "—" },
+                  { label: "Suhu", value: latest.temperature_celsius ?? "—" },
+                  { label: "SpO₂", value: latest.oxygen_saturation ?? "—" },
+                ].map((v) => (
+                  <div key={v.label} className="rounded-2xl bg-canvas p-3 text-center">
+                    <p className="tabular text-lg font-extrabold text-ink">{v.value}</p>
+                    <p className="text-[10px] font-bold text-ink-mute">{v.label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="tabular mt-3 text-xs text-ink-mute">
+                Terakhir diukur{" "}
+                {new Date(latest.measured_at).toLocaleString("id-ID", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+                {vitals.length > 1 ? ` · ${vitals.length} catatan` : ""}
+              </p>
+            </div>
+          )}
+        </Panel>
+
+        {/* Recovery */}
+        <Panel title="Progres pemulihan">
+          {!activeAdmission ? (
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-[80px_110px_1fr] gap-3">
+                <div>
+                  <label className="label">Hari ke-</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={currentDay}
+                    onChange={(e) => setCurrentDay(e.target.value)}
+                    className="field"
+                  />
+                </div>
+                <div>
+                  <label className="label">Estimasi</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={estimatedDays}
+                    onChange={(e) => setEstimatedDays(e.target.value)}
+                    className="field"
+                    placeholder="hari"
+                  />
+                </div>
+                <div>
+                  <label className="label">Catatan untuk pasien</label>
+                  <input
+                    value={recoveryNotes}
+                    onChange={(e) => setRecoveryNotes(e.target.value)}
+                    className="field"
+                    placeholder="mis. Kondisi membaik"
+                  />
+                </div>
+              </div>
+
+              <button onClick={saveRecovery} disabled={busy === "recovery"} className="btn-primary w-full">
+                {savedFlag === "recovery" ? (
+                  <>
+                    <Check className="h-4 w-4" /> Tersimpan
+                  </>
+                ) : recovery ? (
+                  "Perbarui progres"
+                ) : (
+                  "Mulai tracking pemulihan"
+                )}
+              </button>
+
+              {recovery && (
+                <div className="border-t border-line pt-4">
+                  <p className="label">Target aktivitas</p>
+                  <ul className="mb-3 space-y-1.5">
+                    {(recovery.recovery_checklist_items ?? []).map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => toggleTask(item)}
+                          className="group flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-canvas"
+                        >
+                          <span
+                            className={cn(
+                              "grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 transition",
+                              item.is_done
+                                ? "border-brand-500 bg-brand-500 text-white"
+                                : "border-line group-hover:border-brand-300"
+                            )}
+                          >
+                            <Check
+                              className={cn("h-3 w-3 transition-transform", item.is_done ? "scale-100" : "scale-0")}
+                              strokeWidth={3.5}
+                            />
+                          </span>
+                          <span
+                            className={cn(
+                              "text-sm font-semibold",
+                              item.is_done ? "text-ink-mute line-through" : "text-ink"
+                            )}
+                          >
+                            {item.title}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                    {(recovery.recovery_checklist_items ?? []).length === 0 && (
+                      <li className="px-2 text-sm text-ink-mute">Belum ada target.</li>
+                    )}
+                  </ul>
+                  <div className="flex gap-2">
+                    <input
+                      value={newTask}
+                      onChange={(e) => setNewTask(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addTask()}
+                      className="field"
+                      placeholder="Tambah target aktivitas…"
+                    />
+                    <button onClick={addTask} disabled={!newTask.trim()} className="btn-ghost shrink-0">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      {/* Record vitals */}
+      <Modal open={showVitals} onClose={() => setShowVitals(false)} title="Catat vital sign" description="Kosongkan kolom yang tidak diukur.">
+        <FormError>{vitalsError}</FormError>
+        <form onSubmit={saveVitals} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Sistolik (mmHg)</label>
+              <input
+                type="number"
+                value={vitalsForm.blood_pressure_systolic}
+                onChange={(e) => setVitalsForm({ ...vitalsForm, blood_pressure_systolic: e.target.value })}
+                className="field"
+                placeholder="120"
+              />
+            </div>
+            <div>
+              <label className="label">Diastolik (mmHg)</label>
+              <input
+                type="number"
+                value={vitalsForm.blood_pressure_diastolic}
+                onChange={(e) => setVitalsForm({ ...vitalsForm, blood_pressure_diastolic: e.target.value })}
+                className="field"
+                placeholder="80"
+              />
+            </div>
+            <div>
+              <label className="label">Nadi (bpm)</label>
+              <input
+                type="number"
+                value={vitalsForm.heart_rate}
+                onChange={(e) => setVitalsForm({ ...vitalsForm, heart_rate: e.target.value })}
+                className="field"
+                placeholder="80"
+              />
+            </div>
+            <div>
+              <label className="label">Suhu (°C)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={vitalsForm.temperature_celsius}
+                onChange={(e) => setVitalsForm({ ...vitalsForm, temperature_celsius: e.target.value })}
+                className="field"
+                placeholder="36.8"
+              />
+            </div>
+            <div>
+              <label className="label">Napas (/menit)</label>
+              <input
+                type="number"
+                value={vitalsForm.respiratory_rate}
+                onChange={(e) => setVitalsForm({ ...vitalsForm, respiratory_rate: e.target.value })}
+                className="field"
+                placeholder="18"
+              />
+            </div>
+            <div>
+              <label className="label">SpO₂ (%)</label>
+              <input
+                type="number"
+                value={vitalsForm.oxygen_saturation}
+                onChange={(e) => setVitalsForm({ ...vitalsForm, oxygen_saturation: e.target.value })}
+                className="field"
+                placeholder="98"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={() => setShowVitals(false)} className="btn-ghost">
+              Batal
+            </button>
+            <button type="submit" disabled={busy === "vitals"} className="btn-primary">
+              <Activity className="h-4 w-4" /> {busy === "vitals" ? "Menyimpan…" : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </PageShell>
   );
 }

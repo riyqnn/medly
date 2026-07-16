@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Check, ClipboardList, X } from "lucide-react";
+import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import {
+  MEAL_SCHEDULES,
+  MEAL_ORDER_STATUS,
+  formatRupiah,
+  formatTime,
+} from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface MealOrder {
   id: string;
@@ -16,79 +25,135 @@ interface MealOrder {
   };
 }
 
-const STATUS_FLOW: Record<string, string> = {
-  PENDING: "PREPARING",
-  PREPARING: "DELIVERED",
+/** Kitchen flow: a pending order gets prepared, a prepared order gets delivered. */
+const NEXT: Record<string, { status: string; label: string }> = {
+  PENDING: { status: "PREPARING", label: "Mulai siapkan" },
+  PREPARING: { status: "DELIVERED", label: "Tandai terkirim" },
 };
 
 export default function MealOrdersPage() {
   const [orders, setOrders] = useState<MealOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => { fetchOrders(); }, []);
-
-  async function fetchOrders() {
-    setLoading(true);
+  const fetchOrders = useCallback(async () => {
     const res = await fetch("/api/meal-orders");
     if (res.ok) setOrders(await res.json());
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+    const t = setInterval(fetchOrders, 20_000);
+    return () => clearInterval(t);
+  }, [fetchOrders]);
 
   async function updateStatus(id: string, status: string) {
+    setBusy(id);
     await fetch("/api/meal-orders", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
+    setBusy(null);
     fetchOrders();
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Meal Orders</h1>
-        <p className="text-sm text-gray-500 mt-1">Active food orders placed from patient bedside screens</p>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Layanan pasien"
+        title="Pesanan Makanan"
+        description="Pesanan yang masuk dari tablet pasien, urut dari yang paling lama menunggu."
+        action={
+          orders.length > 0 && (
+            <span className="chip bg-brand-50 text-brand-700">{orders.length} pesanan aktif</span>
+          )
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {loading ? (
-          <div className="col-span-full text-center text-gray-400 py-12">Loading orders...</div>
-        ) : orders.length === 0 ? (
-          <div className="col-span-full text-center text-gray-400 py-12">No active orders.</div>
-        ) : orders.map((o) => (
-          <div key={o.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-            <div className="flex justify-between items-start mb-2">
-              <span className="px-2 py-1 text-xs font-semibold rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                {o.status}
-              </span>
-              <span className="text-xs text-gray-500">{new Date(o.created_at).toLocaleTimeString()}</span>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-2">{o.meal_menus?.name || "-"}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Room: {o.patient_admissions?.rooms?.room_number || "-"} <br />
-              Patient: {o.patient_admissions?.patients?.full_name || "-"} <br />
-              {o.order_date} — {o.meal_schedule}
-            </p>
-            {o.patient_notes && <p className="text-xs text-gray-500 mt-2 italic">"{o.patient_notes}"</p>}
-            {STATUS_FLOW[o.status] && (
-              <button
-                onClick={() => updateStatus(o.id, STATUS_FLOW[o.status])}
-                className="mt-4 w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Mark as {STATUS_FLOW[o.status]}
-              </button>
-            )}
-            {o.status === "PENDING" && (
-              <button
-                onClick={() => updateStatus(o.id, "REJECTED")}
-                className="mt-2 w-full px-3 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                Reject
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+      {loading ? (
+        <div className="card">
+          <Loading label="Memuat pesanan…" />
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            icon={ClipboardList}
+            title="Tidak ada pesanan aktif"
+            hint="Pesanan baru dari pasien akan muncul di sini secara otomatis."
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[...orders]
+            .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))
+            .map((o, i) => {
+              const st = MEAL_ORDER_STATUS[o.status];
+              const next = NEXT[o.status];
+              return (
+                <article
+                  key={o.id}
+                  style={{ animationDelay: `${i * 40}ms` }}
+                  className="card animate-fade-up flex flex-col p-5 transition duration-200 hover:shadow-lift"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn("chip", st?.chip)}>{st?.label ?? o.status}</span>
+                    <span className="tabular text-xs font-semibold text-ink-mute">
+                      {formatTime(o.created_at)}
+                    </span>
+                  </div>
+
+                  <h2 className="mt-4 text-lg font-extrabold tracking-tight text-ink">
+                    {o.meal_menus?.name ?? "—"}
+                  </h2>
+                  <p className="tabular text-sm font-bold text-brand-600">
+                    {formatRupiah(o.meal_menus?.price)}
+                  </p>
+
+                  <div className="mt-3 space-y-0.5 text-sm">
+                    <p className="font-bold text-ink">
+                      Kamar {o.patient_admissions?.rooms?.room_number ?? "—"}
+                    </p>
+                    <p className="text-ink-soft">{o.patient_admissions?.patients?.full_name ?? "—"}</p>
+                    <p className="tabular text-xs text-ink-mute">
+                      {new Date(o.order_date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ·{" "}
+                      {MEAL_SCHEDULES.find((s) => s.value === o.meal_schedule)?.label ?? o.meal_schedule}
+                    </p>
+                  </div>
+
+                  {o.patient_notes && (
+                    <p className="mt-3 rounded-xl bg-canvas px-3 py-2 text-xs italic text-ink-soft">
+                      “{o.patient_notes}”
+                    </p>
+                  )}
+
+                  <div className="mt-5 flex gap-2 border-t border-line pt-4">
+                    {next && (
+                      <button
+                        onClick={() => updateStatus(o.id, next.status)}
+                        disabled={busy === o.id}
+                        className="btn-primary flex-1"
+                      >
+                        <Check className="h-4 w-4" /> {next.label}
+                      </button>
+                    )}
+                    {o.status === "PENDING" && (
+                      <button
+                        onClick={() => confirm("Tolak pesanan ini?") && updateStatus(o.id, "REJECTED")}
+                        disabled={busy === o.id}
+                        className="btn-danger shrink-0 px-3"
+                        title="Tolak pesanan"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+        </div>
+      )}
+    </PageShell>
   );
 }

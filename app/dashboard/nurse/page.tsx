@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { LogoutButton } from "@/src/features/auth/components/LogoutButton";
+import { useCallback, useEffect, useState } from "react";
+import { Check, BellRing } from "lucide-react";
+import { PortalHeader } from "@/src/features/shell/components/PortalHeader";
+import { EmptyState, Loading } from "@/src/features/shell/components/Page";
 import { createClient } from "@/src/features/auth/utils/supabase/client";
+import {
+  NURSE_REQUEST_CATEGORIES,
+  NURSE_REQUEST_STATUS,
+  PRIORITY,
+  formatTime,
+} from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface NurseRequest {
   id: string;
@@ -10,10 +19,18 @@ interface NurseRequest {
   priority: string;
   status: string;
   created_at: string;
+  resolved_at: string | null;
   patient_admissions?: {
     patients?: { full_name: string; mrn: string };
     rooms?: { room_number: string; ward_name: string };
   };
+}
+
+function waitedFor(iso: string) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "baru saja";
+  if (mins < 60) return `${mins} menit`;
+  return `${Math.floor(mins / 60)} jam ${mins % 60} menit`;
 }
 
 export default function NurseDashboard() {
@@ -21,178 +38,199 @@ export default function NurseDashboard() {
   const [history, setHistory] = useState<NurseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [nurseId, setNurseId] = useState<string | null>(null);
-  const supabase = createClient();
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    async function init() {
-      // Find the nurse profile based on the logged-in user
-      const { data: { user } } = await supabase.auth.getUser();
+    const supabase = createClient();
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase.from("profiles").select("full_name, hospital_id").eq("id", user.id).single();
-      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, hospital_id")
+        .eq("id", user.id)
+        .single();
+
       if (profile) {
-        // Try to match nurse by name, or just get the first one for this hospital
-        const { data: nurses } = await supabase.from("nurses").select("id").eq("hospital_id", profile.hospital_id);
+        const { data: nurses } = await supabase
+          .from("nurses")
+          .select("id, full_name")
+          .eq("hospital_id", profile.hospital_id);
         if (nurses && nurses.length > 0) {
-          // Naive match by name, fallback to first nurse
-          const matched = nurses.find((n: any) => n.full_name === profile.full_name) || nurses[0];
+          const matched = nurses.find((n: any) => n.full_name === profile.full_name) ?? nurses[0];
           setNurseId(matched.id);
         }
       }
-      
-      fetchRequests();
-    }
-    init();
+    })();
   }, []);
 
-  async function fetchRequests() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/nurse-requests");
-      if (res.ok) setRequests(await res.json());
-
-      // If we know the nurse ID, fetch their history
-      if (nurseId) {
-        const histRes = await fetch(`/api/nurse-requests?nurse_id=${nurseId}&status=RESOLVED`);
-        if (histRes.ok) setHistory(await histRes.json());
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  const fetchRequests = useCallback(async () => {
+    const res = await fetch("/api/nurse-requests");
+    if (res.ok) setRequests(await res.json());
+    if (nurseId) {
+      const h = await fetch(`/api/nurse-requests?nurse_id=${nurseId}&status=RESOLVED`);
+      if (h.ok) setHistory(await h.json());
     }
-  }
-
-  // Re-fetch history if nurseId becomes available after initial load
-  useEffect(() => {
-    if (nurseId) fetchRequests();
+    setLoading(false);
   }, [nurseId]);
 
-  async function handleAction(id: string, newStatus: string) {
-    try {
-      const payload: any = { id, status: newStatus };
-      if (newStatus === "IN_PROGRESS" && nurseId) {
-        payload.handled_by_nurse_id = nurseId;
-      }
+  useEffect(() => {
+    fetchRequests();
+    const t = setInterval(fetchRequests, 15_000);
+    return () => clearInterval(t);
+  }, [fetchRequests]);
 
-      const res = await fetch("/api/nurse-requests", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        fetchRequests(); // Refresh lists
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  async function handleAction(id: string, status: string) {
+    setBusy(id);
+    const payload: Record<string, unknown> = { id, status };
+    if (status === "IN_PROGRESS" && nurseId) payload.handled_by_nurse_id = nurseId;
+    const res = await fetch("/api/nurse-requests", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setBusy(null);
+    if (res.ok) fetchRequests();
   }
 
-  const PRIORITY_COLORS: Record<string, string> = {
-    HIGH: "bg-red-100 text-red-700 border-red-200",
-    MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    LOW: "bg-blue-100 text-blue-700 border-blue-200",
-  };
+  const ordered = [...requests].sort((a, b) => {
+    const rank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+    const p = (rank[a.priority] ?? 3) - (rank[b.priority] ?? 3);
+    return p !== 0 ? p : +new Date(a.created_at) - +new Date(b.created_at);
+  });
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
-      <header className="flex justify-between items-center mb-8 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-500 to-emerald-600">Nurse Command Center</h1>
-          <p className="text-sm text-gray-500 mt-1">Live patient requests and bedside assistance</p>
-        </div>
-        <LogoutButton />
-      </header>
+    <div className="min-h-screen bg-canvas">
+      <PortalHeader
+        role="Portal perawat"
+        title="Permintaan Pasien"
+        subtitle="Diurutkan dari prioritas tertinggi dan yang paling lama menunggu."
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Active Requests Column */}
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
-            Active Bedside Requests
-          </h2>
-          
-          {loading ? (
-            <div className="text-gray-500 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">Loading requests...</div>
-          ) : requests.length === 0 ? (
-            <div className="text-gray-500 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">No active patient requests. All clear! 🎉</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {requests.map((r) => (
-                <div key={r.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <span className={`px-3 py-1 text-xs font-bold rounded-full border ${PRIORITY_COLORS[r.priority] || PRIORITY_COLORS.LOW}`}>
-                        {r.priority} PRIORITY
-                      </span>
-                      <span className="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
-                        {new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    
-                    <h3 className="text-xl font-black text-gray-900 dark:text-white capitalize mb-1">
-                      {r.request_category.replace('_', ' ').toLowerCase()}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      <span className="font-semibold text-gray-900 dark:text-gray-200">{r.patient_admissions?.rooms?.room_number || 'Unknown Room'}</span> • {r.patient_admissions?.patients?.full_name || 'Unknown Patient'}
-                    </p>
-                  </div>
-                  
-                  <div className="mt-auto pt-4 border-t border-gray-50 dark:border-gray-800/50">
-                    {r.status === "PENDING" ? (
-                      <button 
-                        onClick={() => handleAction(r.id, "IN_PROGRESS")}
-                        className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors"
-                      >
-                        Accept & Respond
-                      </button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleAction(r.id, "RESOLVED")}
-                          className="flex-1 py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-xl transition-colors"
-                        >
-                          Mark Resolved
-                        </button>
-                        <button 
-                          disabled
-                          className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-400 font-bold rounded-xl cursor-not-allowed text-sm"
-                        >
-                          In Progress
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+      <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <section>
+            <div className="mb-4 flex items-center gap-2.5">
+              <h2 className="eyebrow">Permintaan aktif</h2>
+              {ordered.length > 0 && (
+                <span className="chip bg-brand-50 text-brand-700">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-halo rounded-full bg-brand-500" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-500" />
+                  </span>
+                  {ordered.length}
+                </span>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* History Column */}
-        <div>
-          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200">My Shift History</h2>
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-            {history.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No resolved requests yet.</div>
+            {loading ? (
+              <div className="card">
+                <Loading label="Memuat permintaan…" />
+              </div>
+            ) : ordered.length === 0 ? (
+              <div className="card">
+                <EmptyState
+                  icon={Check}
+                  title="Semua permintaan tertangani"
+                  hint="Permintaan baru dari pasien akan muncul di sini secara otomatis."
+                />
+              </div>
             ) : (
-              <ul className="divide-y divide-gray-50 dark:divide-gray-800/50">
-                {history.map(h => (
-                  <li key={h.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold text-sm capitalize">{h.request_category.replace('_', ' ').toLowerCase()}</span>
-                      <span className="text-xs text-gray-400">{new Date(h.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">Room {h.patient_admissions?.rooms?.room_number} • {h.patient_admissions?.patients?.full_name}</p>
-                    <div className="mt-2 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 w-max px-2 py-0.5 rounded uppercase">Resolved</div>
-                  </li>
-                ))}
-              </ul>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {ordered.map((r, i) => {
+                  const pr = PRIORITY[r.priority] ?? PRIORITY.LOW;
+                  const st = NURSE_REQUEST_STATUS[r.status];
+                  return (
+                    <article
+                      key={r.id}
+                      style={{ animationDelay: `${i * 40}ms` }}
+                      className={cn(
+                        "card animate-fade-up flex flex-col p-5 transition duration-200 hover:shadow-lift",
+                        r.priority === "HIGH" && "border-red-200"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className={cn("chip", pr.chip)}>
+                          <span className={cn("h-1.5 w-1.5 rounded-full", pr.dot)} />
+                          {pr.label}
+                        </span>
+                        <span className={cn("chip", st?.chip)}>{st?.label ?? r.status}</span>
+                      </div>
+
+                      <h3 className="mt-4 text-lg font-extrabold tracking-tight text-ink">
+                        {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
+                      </h3>
+
+                      <p className="mt-1.5 text-sm font-bold text-ink">
+                        Kamar {r.patient_admissions?.rooms?.room_number ?? "—"}
+                      </p>
+                      <p className="text-sm text-ink-soft">
+                        {r.patient_admissions?.patients?.full_name ?? "—"}
+                      </p>
+                      <p className="tabular mt-0.5 text-xs text-ink-mute">
+                        {formatTime(r.created_at)} · menunggu {waitedFor(r.created_at)}
+                      </p>
+
+                      <div className="mt-5 border-t border-line pt-4">
+                        {r.status === "PENDING" ? (
+                          <button
+                            onClick={() => handleAction(r.id, "IN_PROGRESS")}
+                            disabled={busy === r.id}
+                            className="btn-primary w-full"
+                          >
+                            Ambil permintaan
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleAction(r.id, "RESOLVED")}
+                            disabled={busy === r.id}
+                            className="btn-primary w-full"
+                          >
+                            <Check className="h-4 w-4" /> Tandai selesai
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             )}
-          </div>
+          </section>
+
+          <aside>
+            <h2 className="eyebrow mb-4">Riwayat shift saya</h2>
+            <div className="card overflow-hidden">
+              {history.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-ink-mute">
+                  Belum ada permintaan yang Anda selesaikan.
+                </p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {history.slice(0, 10).map((h) => (
+                    <li key={h.id} className="p-4 transition-colors hover:bg-canvas/70">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-extrabold text-ink">
+                          {NURSE_REQUEST_CATEGORIES[h.request_category]?.label ?? h.request_category}
+                        </p>
+                        <span className="tabular shrink-0 text-[11px] font-semibold text-ink-mute">
+                          {h.resolved_at ? formatTime(h.resolved_at) : formatTime(h.created_at)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-ink-soft">
+                        Kamar {h.patient_admissions?.rooms?.room_number ?? "—"} ·{" "}
+                        {h.patient_admissions?.patients?.full_name ?? "—"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

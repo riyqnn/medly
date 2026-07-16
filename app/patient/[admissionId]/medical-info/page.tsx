@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { HeartPulse, Thermometer, Activity, Wind } from "lucide-react";
+import { Activity, HeartPulse, Thermometer, Wind } from "lucide-react";
+import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { TREATMENT_CATEGORIES, TREATMENT_STATUS } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface Session {
-  patient: { full_name: string; dob: string | null; gender: string | null } | null;
+  patient: { full_name: string } | null;
   room: { room_number: string; ward_name: string | null } | null;
   primary_diagnosis: string | null;
   day_of_stay: number;
   doctors: { role: string; full_name: string; specialization: string | null }[];
 }
-
 interface Schedule {
   id: string;
   category: string;
@@ -21,7 +23,6 @@ interface Schedule {
   status: string;
   doctors?: { full_name: string } | null;
 }
-
 interface Vital {
   id: string;
   measured_at: string;
@@ -29,25 +30,8 @@ interface Vital {
   blood_pressure_diastolic: number | null;
   heart_rate: number | null;
   temperature_celsius: number | null;
-  respiratory_rate: number | null;
   oxygen_saturation: number | null;
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-  DOCTOR_VISIT: "Visit Dokter",
-  MEDICATION: "Pemberian Obat",
-  LAB: "Pemeriksaan Lab",
-  RADIOLOGY: "Radiologi",
-  PHYSIO: "Fisioterapi",
-  CONTROL: "Jadwal Kontrol",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  SCHEDULED: "bg-blue-100 text-blue-700",
-  DONE: "bg-green-100 text-green-700",
-  CANCELLED: "bg-gray-100 text-gray-500",
-  RESCHEDULED: "bg-yellow-100 text-yellow-700",
-};
 
 export default function MedicalInfoPage() {
   const { admissionId } = useParams<{ admissionId: string }>();
@@ -57,101 +41,176 @@ export default function MedicalInfoPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      const [sRes, tRes, vRes] = await Promise.all([
+    (async () => {
+      const [s, t, v] = await Promise.all([
         fetch(`/api/patient/session/${admissionId}`),
         fetch(`/api/patient/treatment-schedules?admission_id=${admissionId}`),
         fetch(`/api/patient/vitals?admission_id=${admissionId}`),
       ]);
-      if (sRes.ok) setSession(await sRes.json());
-      if (tRes.ok) setSchedules(await tRes.json());
-      if (vRes.ok) setVitals(await vRes.json());
+      if (s.ok) setSession(await s.json());
+      if (t.ok) setSchedules(await t.json());
+      if (v.ok) setVitals(await v.json());
       setLoading(false);
-    }
-    load();
+    })();
   }, [admissionId]);
 
-  if (loading) return <div className="text-gray-500">Memuat...</div>;
+  if (loading) return <BedsideLoading />;
 
-  const latestVital = vitals[0];
-  const mainDoctor = session?.doctors.find((d) => d.role === "MAIN_DOCTOR") || session?.doctors[0];
+  const latest = vitals[0];
+  const doctor = session?.doctors.find((d) => d.role === "MAIN_DOCTOR") ?? session?.doctors[0];
+
+  const facts = [
+    { label: "Dokter", value: doctor?.full_name ?? "—", sub: doctor?.specialization ?? undefined },
+    { label: "Diagnosa utama", value: session?.primary_diagnosis ?? "—" },
+    {
+      label: "Kamar",
+      value: session?.room?.room_number ?? "—",
+      sub: session?.room?.ward_name ?? undefined,
+    },
+    { label: "Hari rawat", value: `Hari ke-${session?.day_of_stay ?? 1}` },
+  ];
+
+  const readings = latest
+    ? [
+        {
+          icon: Activity,
+          label: "Tekanan darah",
+          value:
+            latest.blood_pressure_systolic && latest.blood_pressure_diastolic
+              ? `${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`
+              : "—",
+          unit: "mmHg",
+        },
+        { icon: HeartPulse, label: "Nadi", value: latest.heart_rate ?? "—", unit: "bpm" },
+        {
+          icon: Thermometer,
+          label: "Suhu",
+          value: latest.temperature_celsius ?? "—",
+          unit: "°C",
+        },
+        { icon: Wind, label: "Saturasi oksigen", value: latest.oxygen_saturation ?? "—", unit: "%" },
+      ]
+    : [];
+
+  /* Group the timeline by day so a long stay stays readable. */
+  const grouped = schedules.reduce<Record<string, Schedule[]>>((acc, s) => {
+    const key = new Date(s.scheduled_time).toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    (acc[key] ||= []).push(s);
+    return acc;
+  }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Informasi Medis</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><p className="text-xs text-gray-500">Dokter</p><p className="font-medium">{mainDoctor?.full_name || "-"}</p></div>
-          <div><p className="text-xs text-gray-500">Diagnosa Utama</p><p className="font-medium">{session?.primary_diagnosis || "-"}</p></div>
-          <div><p className="text-xs text-gray-500">Kamar</p><p className="font-medium">{session?.room?.room_number || "-"}</p></div>
-          <div><p className="text-xs text-gray-500">Hari Rawat</p><p className="font-medium">Hari ke-{session?.day_of_stay}</p></div>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <BedsideHeader title="Info Medis & Jadwal" description="Ringkasan kondisi dan rencana perawatan Anda." />
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Vital Sign Terakhir</h2>
-        {latestVital ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-red-500" />
-              <div>
-                <p className="text-xs text-gray-500">Tekanan Darah</p>
-                <p className="font-medium">{latestVital.blood_pressure_systolic ?? "-"}/{latestVital.blood_pressure_diastolic ?? "-"} mmHg</p>
-              </div>
+      <BedsideCard title="Informasi medis">
+        <dl className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+          {facts.map((f) => (
+            <div key={f.label}>
+              <dt className="text-xs font-semibold text-ink-mute">{f.label}</dt>
+              <dd className="mt-1 text-[15px] font-extrabold leading-snug text-ink">{f.value}</dd>
+              {f.sub && <p className="text-xs text-ink-mute">{f.sub}</p>}
             </div>
-            <div className="flex items-center gap-2">
-              <HeartPulse className="w-5 h-5 text-pink-500" />
-              <div>
-                <p className="text-xs text-gray-500">Nadi</p>
-                <p className="font-medium">{latestVital.heart_rate ?? "-"} bpm</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Thermometer className="w-5 h-5 text-orange-500" />
-              <div>
-                <p className="text-xs text-gray-500">Suhu</p>
-                <p className="font-medium">{latestVital.temperature_celsius ?? "-"} °C</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Wind className="w-5 h-5 text-blue-500" />
-              <div>
-                <p className="text-xs text-gray-500">Saturasi O2</p>
-                <p className="font-medium">{latestVital.oxygen_saturation ?? "-"}%</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-400">Belum ada data vital sign.</p>
-        )}
-      </div>
+          ))}
+        </dl>
+      </BedsideCard>
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Jadwal Perawatan</h2>
-        {schedules.length === 0 ? (
-          <p className="text-sm text-gray-400">Belum ada jadwal.</p>
+      <BedsideCard
+        title="Vital sign terakhir"
+        action={
+          latest ? (
+            <span className="tabular text-[11px] font-semibold text-ink-mute">
+              diukur{" "}
+              {new Date(latest.measured_at).toLocaleString("id-ID", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          ) : null
+        }
+      >
+        {!latest ? (
+          <BedsideEmpty>Belum ada pengukuran vital sign.</BedsideEmpty>
         ) : (
-          <div className="space-y-3">
-            {schedules.map((s) => (
-              <div key={s.id} className="flex items-start justify-between border-b border-gray-100 dark:border-gray-800 pb-3 last:border-0 last:pb-0">
-                <div>
-                  <p className="text-xs text-gray-500">
-                    {new Date(s.scheduled_time).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
-                  </p>
-                  <p className="font-medium text-sm mt-0.5">
-                    {CATEGORY_LABELS[s.category] || s.category} — {s.title}
-                  </p>
-                  {s.description && <p className="text-xs text-gray-500 mt-0.5">{s.description}</p>}
-                  {s.doctors?.full_name && <p className="text-xs text-gray-400 mt-0.5">{s.doctors.full_name}</p>}
-                </div>
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${STATUS_COLORS[s.status] || "bg-gray-100 text-gray-600"}`}>
-                  {s.status}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {readings.map((r) => (
+              <div key={r.label} className="rounded-2xl bg-canvas p-4">
+                <span className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-white text-brand-600 shadow-card">
+                  <r.icon className="h-4 w-4" strokeWidth={2.2} />
                 </span>
+                <p className="tabular text-2xl font-extrabold tracking-tight text-ink">
+                  {r.value}
+                  <span className="ml-1 text-xs font-bold text-ink-mute">{r.unit}</span>
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-ink-soft">{r.label}</p>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </BedsideCard>
+
+      <BedsideCard title="Jadwal perawatan">
+        {schedules.length === 0 ? (
+          <BedsideEmpty>Belum ada jadwal perawatan.</BedsideEmpty>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(grouped).map(([day, items]) => (
+              <div key={day}>
+                <p className="mb-3 text-xs font-extrabold capitalize text-ink-soft">{day}</p>
+                {/* Timeline: the rail is the day, each node is a treatment on it. */}
+                <ol className="relative space-y-3 border-l border-line pl-5">
+                  {items.map((s) => {
+                    const cat = TREATMENT_CATEGORIES[s.category];
+                    const st = TREATMENT_STATUS[s.status];
+                    return (
+                      <li key={s.id} className="relative">
+                        <span
+                          className={cn(
+                            "absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white",
+                            cat?.tone.strong
+                          )}
+                          aria-hidden="true"
+                        />
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="tabular text-xs font-bold text-ink-mute">
+                              {new Date(s.scheduled_time).toLocaleTimeString("id-ID", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                              {" · "}
+                              {cat?.label ?? s.category}
+                            </p>
+                            <p
+                              className={cn(
+                                "text-[15px] font-extrabold text-ink",
+                                s.status === "CANCELLED" && "text-ink-mute line-through"
+                              )}
+                            >
+                              {s.title}
+                            </p>
+                            {s.description && <p className="mt-0.5 text-sm text-ink-soft">{s.description}</p>}
+                            {s.doctors?.full_name && (
+                              <p className="mt-0.5 text-xs text-ink-mute">{s.doctors.full_name}</p>
+                            )}
+                          </div>
+                          <span className={cn("chip", st?.chip)}>{st?.label ?? s.status}</span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            ))}
+          </div>
+        )}
+      </BedsideCard>
     </div>
   );
 }

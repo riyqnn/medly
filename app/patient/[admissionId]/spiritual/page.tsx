@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Clock, Music2, BookOpenText, Sparkles as SparklesIcon, HelpCircle } from "lucide-react";
+import { Clock, Music2, BookOpenText, Sparkles, HelpCircle, ExternalLink, type LucideIcon } from "lucide-react";
+import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { SPIRITUAL_CATEGORIES } from "@/src/features/shell/constants";
 
 interface Content {
   id: string;
@@ -12,12 +14,12 @@ interface Content {
   body_text: string | null;
 }
 
-const CATEGORY_META: Record<string, { label: string; icon: any }> = {
-  PRAYER_TIME: { label: "Jadwal Sholat", icon: Clock },
-  MUROTTAL: { label: "Murottal", icon: Music2 },
-  DAILY_PRAYER: { label: "Doa Harian", icon: BookOpenText },
-  REFLECTION: { label: "Renungan", icon: SparklesIcon },
-  OTHER: { label: "Lainnya", icon: HelpCircle },
+const ICONS: Record<string, LucideIcon> = {
+  PRAYER_TIME: Clock,
+  MUROTTAL: Music2,
+  DAILY_PRAYER: BookOpenText,
+  REFLECTION: Sparkles,
+  OTHER: HelpCircle,
 };
 
 export default function SpiritualPage() {
@@ -27,12 +29,12 @@ export default function SpiritualPage() {
 
   useEffect(() => {
     fetch(`/api/patient/spiritual?admission_id=${admissionId}`)
-      .then((res) => (res.ok ? res.json() : []))
+      .then((r) => (r.ok ? r.json() : []))
       .then(setContents)
       .finally(() => setLoading(false));
   }, [admissionId]);
 
-  if (loading) return <div className="text-gray-500">Memuat...</div>;
+  if (loading) return <BedsideLoading />;
 
   const grouped = contents.reduce<Record<string, Content[]>>((acc, c) => {
     (acc[c.category] ||= []).push(c);
@@ -40,41 +42,52 @@ export default function SpiritualPage() {
   }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Kerohanian</h2>
-        <p className="text-sm text-gray-500 mb-4">Pendampingan spiritual selama masa perawatan.</p>
+    <div className="space-y-4">
+      <BedsideHeader title="Kerohanian" description="Pendampingan spiritual selama masa perawatan." />
 
-        {contents.length === 0 ? (
-          <p className="text-sm text-gray-400">Belum ada konten kerohanian.</p>
-        ) : (
-          Object.entries(grouped).map(([cat, items]) => {
-            const meta = CATEGORY_META[cat] || CATEGORY_META.OTHER;
-            const Icon = meta.icon;
-            return (
-              <div key={cat} className="mb-5 last:mb-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{meta.label}</h3>
-                </div>
-                <div className="space-y-2">
-                  {items.map((c) => (
-                    <div key={c.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white">{c.title}</p>
-                      {c.body_text && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 whitespace-pre-wrap">{c.body_text}</p>}
-                      {c.media_url && (
-                        <a href={c.media_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-                          Buka →
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
+      {contents.length === 0 ? (
+        <BedsideCard>
+          <BedsideEmpty>Belum ada konten kerohanian.</BedsideEmpty>
+        </BedsideCard>
+      ) : (
+        Object.entries(grouped).map(([category, items]) => {
+          const Icon = ICONS[category] ?? HelpCircle;
+          return (
+            <BedsideCard key={category}>
+              <div className="mb-4 flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                  <Icon className="h-4 w-4" strokeWidth={2.2} />
+                </span>
+                <h2 className="text-sm font-extrabold text-ink">
+                  {SPIRITUAL_CATEGORIES[category]?.label ?? category}
+                </h2>
               </div>
-            );
-          })
-        )}
-      </div>
+              <div className="space-y-3">
+                {items.map((c) => (
+                  <article key={c.id} className="rounded-2xl border border-line p-4">
+                    <h3 className="text-sm font-extrabold text-ink">{c.title}</h3>
+                    {c.body_text && (
+                      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
+                        {c.body_text}
+                      </p>
+                    )}
+                    {c.media_url && (
+                      <a
+                        href={c.media_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="row-link mt-2 inline-flex items-center gap-1.5 text-xs"
+                      >
+                        Buka <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </BedsideCard>
+          );
+        })
+      )}
     </div>
   );
 }

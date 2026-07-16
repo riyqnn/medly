@@ -25,9 +25,10 @@ export async function GET(req: NextRequest) {
     .from("patient_doctor_assignments")
     .select(`
       *,
-      doctors ( full_name, specialization ),
-      patient_admissions ( 
-        id, 
+      doctors ( id, full_name, specialization ),
+      patient_admissions (
+        id,
+        status,
         patients ( full_name, mrn ),
         rooms ( room_number, ward_name )
       )

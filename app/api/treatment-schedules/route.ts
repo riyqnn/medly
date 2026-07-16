@@ -20,21 +20,29 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const admissionId = searchParams.get("admission_id");
   const date = searchParams.get("date"); // YYYY-MM-DD
+  // Absolute ISO instants. Callers rendering a calendar send these instead of
+  // `date`, because a day boundary only means something in the viewer's
+  // timezone — deriving it from a bare date here would silently use UTC.
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
 
   let query = supabase
     .from("treatment_schedules")
     .select(`
       *,
       doctors ( id, full_name, specialization ),
-      patient_admissions!inner ( id, patient_id )
+      patient_admissions!inner ( id, patient_id, patients ( full_name, mrn ), rooms ( room_number ) )
     `)
     .eq("hospital_id", hospitalId)
+    .is("deleted_at", null)
     .order("scheduled_time", { ascending: true });
 
   if (admissionId) {
     query = query.eq("admission_id", admissionId);
   }
-  if (date) {
+  if (from && to) {
+    query = query.gte("scheduled_time", from).lte("scheduled_time", to);
+  } else if (date) {
     const startOfDay = new Date(`${date}T00:00:00.000Z`);
     const endOfDay = new Date(`${date}T23:59:59.999Z`);
     query = query.gte("scheduled_time", startOfDay.toISOString())

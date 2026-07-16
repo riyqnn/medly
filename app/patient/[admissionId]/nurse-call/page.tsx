@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Bell, Frown, Droplets, ShowerHead, GlassWater, Blinds, HelpCircle } from "lucide-react";
+import {
+  BellRing,
+  Frown,
+  Droplets,
+  ShowerHead,
+  GlassWater,
+  Blinds,
+  HelpCircle,
+  Check,
+  type LucideIcon,
+} from "lucide-react";
+import { BedsideHeader, BedsideCard, BedsideEmpty } from "../PatientPage";
+import { NURSE_REQUEST_CATEGORIES, NURSE_REQUEST_STATUS, formatTime } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface NurseRequest {
   id: string;
@@ -13,110 +26,160 @@ interface NurseRequest {
   resolved_at: string | null;
 }
 
-const CATEGORIES = [
-  { value: "CALL_NURSE", label: "Panggil Perawat", icon: Bell },
-  { value: "PAIN", label: "Nyeri", icon: Frown },
-  { value: "IV_DRIP", label: "Infus Habis", icon: Droplets },
-  { value: "BATHROOM", label: "Bantuan ke Kamar Mandi", icon: ShowerHead },
-  { value: "DRINKING_WATER", label: "Air Minum", icon: GlassWater },
-  { value: "EXTRA_BLANKET", label: "Selimut Tambahan", icon: Blinds },
-  { value: "OTHER", label: "Bantuan Lainnya", icon: HelpCircle },
-];
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "Menunggu", color: "bg-yellow-100 text-yellow-700" },
-  IN_PROGRESS: { label: "Sedang Ditangani", color: "bg-blue-100 text-blue-700" },
-  RESOLVED: { label: "Selesai", color: "bg-green-100 text-green-700" },
+const ICONS: Record<string, LucideIcon> = {
+  CALL_NURSE: BellRing,
+  PAIN: Frown,
+  IV_DRIP: Droplets,
+  BATHROOM: ShowerHead,
+  DRINKING_WATER: GlassWater,
+  EXTRA_BLANKET: Blinds,
+  OTHER: HelpCircle,
 };
 
 export default function NurseCallPage() {
   const { admissionId } = useParams<{ admissionId: string }>();
   const [requests, setRequests] = useState<NurseRequest[]>([]);
-  const [sending, setSending] = useState<string | null>(null);
-  const [justSent, setJustSent] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  useEffect(() => { loadRequests(); }, [admissionId]);
-
-  async function loadRequests() {
+  const load = useCallback(async () => {
     const res = await fetch(`/api/patient/nurse-requests?admission_id=${admissionId}`);
     if (res.ok) setRequests(await res.json());
-  }
+  }, [admissionId]);
 
-  async function sendRequest(category: string) {
-    setSending(category);
+  useEffect(() => {
+    load();
+    // Status moves on the nurse's side, so the patient's view polls for it.
+    const t = setInterval(load, 15_000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  async function send(category: string) {
+    setPending(category);
+    setError("");
     const res = await fetch("/api/patient/nurse-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ admission_id: admissionId, request_category: category }),
     });
-    setSending(null);
-    if (res.ok) {
-      setJustSent(category);
-      setTimeout(() => setJustSent(null), 3000);
-      loadRequests();
-    } else {
-      const d = await res.json();
-      alert(d.error || "Gagal mengirim permintaan");
+    setPending(null);
+    if (!res.ok) {
+      setError("Permintaan gagal terkirim. Silakan coba lagi.");
+      return;
     }
+    setSent(category);
+    setTimeout(() => setSent(null), 2600);
+    load();
   }
 
-  const activeRequests = requests.filter((r) => r.status !== "RESOLVED");
+  const active = requests.filter((r) => r.status !== "RESOLVED");
   const history = requests.filter((r) => r.status === "RESOLVED");
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Panggil Perawat</h2>
-        <p className="text-sm text-gray-500 mb-4">Pilih kebutuhan Anda, perawat akan segera menerima notifikasi.</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => sendRequest(c.value)}
-              disabled={sending === c.value}
-              className="flex flex-col items-center gap-2 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors disabled:opacity-50"
-            >
-              <c.icon className="w-7 h-7 text-blue-600" />
-              <span className="text-xs font-medium text-center">{c.label}</span>
-              {justSent === c.value && <span className="text-[10px] text-green-600 font-semibold">Terkirim!</span>}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="space-y-4">
+      <BedsideHeader
+        title="Panggil Perawat"
+        description="Pilih kebutuhan Anda — perawat langsung menerima permintaannya."
+      />
 
-      {activeRequests.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Permintaan Aktif</h2>
-          <div className="space-y-2">
-            {activeRequests.map((r) => {
-              const cat = CATEGORIES.find((c) => c.value === r.request_category);
-              const st = STATUS_LABELS[r.status] || { label: r.status, color: "bg-gray-100 text-gray-600" };
-              return (
-                <div key={r.id} className="flex items-center justify-between text-sm">
-                  <span>{cat?.label || r.request_category}</span>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${st.color}`}>{st.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {error && (
+        <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+          {error}
+        </p>
       )}
 
-      {history.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Riwayat</h2>
-          <div className="space-y-2">
-            {history.slice(0, 5).map((r) => {
-              const cat = CATEGORIES.find((c) => c.value === r.request_category);
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {Object.entries(NURSE_REQUEST_CATEGORIES).map(([key, cat], i) => {
+          const isSent = sent === key;
+          const isPending = pending === key;
+          const Icon = isSent ? Check : ICONS[key];
+          const urgent = key === "PAIN";
+          return (
+            <button
+              key={key}
+              onClick={() => send(key)}
+              disabled={isPending || isSent}
+              style={{ animationDelay: `${i * 40}ms` }}
+              className={cn(
+                "group card flex animate-fade-up flex-col items-center justify-center gap-3 px-3 py-7 transition duration-200",
+                "hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift active:scale-[0.98]",
+                isSent && "border-brand-300 bg-brand-50"
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-14 w-14 place-items-center rounded-2xl transition-transform duration-200 group-hover:scale-105",
+                  isSent
+                    ? "bg-brand-500 text-white"
+                    : urgent
+                      ? "bg-red-50 text-red-500"
+                      : "bg-brand-50 text-brand-600"
+                )}
+              >
+                <Icon className={cn("h-7 w-7", isPending && "animate-pulse")} strokeWidth={1.9} />
+              </span>
+              <span className="text-center text-sm font-extrabold leading-tight text-ink">
+                {isSent ? "Terkirim" : cat.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <BedsideCard title="Permintaan aktif">
+        {active.length === 0 ? (
+          <BedsideEmpty>Tidak ada permintaan yang sedang berjalan.</BedsideEmpty>
+        ) : (
+          <ul className="space-y-2.5">
+            {active.map((r) => {
+              const st = NURSE_REQUEST_STATUS[r.status];
+              const Icon = ICONS[r.request_category] ?? HelpCircle;
               return (
-                <div key={r.id} className="flex items-center justify-between text-sm text-gray-500">
-                  <span>{cat?.label || r.request_category}</span>
-                  <span>{r.resolved_at ? new Date(r.resolved_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}</span>
-                </div>
+                <li
+                  key={r.id}
+                  className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                    <Icon className="h-4 w-4" strokeWidth={2.2} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-extrabold text-ink">
+                      {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
+                    </p>
+                    <p className="tabular text-xs text-ink-mute">dikirim {formatTime(r.created_at)}</p>
+                  </div>
+                  <span className={cn("chip", st?.chip)}>
+                    {r.status === "PENDING" && (
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-halo rounded-full bg-amber-500" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      </span>
+                    )}
+                    {st?.label ?? r.status}
+                  </span>
+                </li>
               );
             })}
-          </div>
-        </div>
+          </ul>
+        )}
+      </BedsideCard>
+
+      {history.length > 0 && (
+        <BedsideCard title="Riwayat">
+          <ul className="divide-y divide-line">
+            {history.slice(0, 6).map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span className="font-semibold text-ink-soft">
+                  {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
+                </span>
+                <span className="tabular text-xs text-ink-mute">
+                  selesai {r.resolved_at ? formatTime(r.resolved_at) : "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </BedsideCard>
       )}
     </div>
   );

@@ -1,20 +1,26 @@
-import { CreateStaffForm } from "@/src/features/auth/components/CreateStaffForm";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { CreateStaffForm } from "@/src/features/auth/components/CreateStaffForm";
+import { PageShell } from "@/src/features/shell/components/Page";
 
 export default function CreateStaffPage() {
   return (
-    <div className="p-8 text-gray-900 dark:text-white">
-      <div className="mb-8">
-        <Link href="/dashboard/hospital/staff" className="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">
-          ← Back to Staff
-        </Link>
-        <h1 className="text-2xl font-bold mt-2">Add Staff</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create a new Doctor or Nurse account for your hospital.</p>
-      </div>
+    <PageShell className="max-w-lg">
+      <Link
+        href="/dashboard/hospital/staff"
+        className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-ink-soft transition hover:text-brand-600"
+      >
+        <ChevronLeft className="h-4 w-4" /> Semua staf
+      </Link>
 
-      <div className="max-w-md bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+      <h1 className="text-2xl font-extrabold tracking-tight text-ink">Tambah staf</h1>
+      <p className="mt-1 text-sm text-ink-soft">
+        Akun langsung aktif — bagikan email dan kata sandinya ke staf yang bersangkutan.
+      </p>
+
+      <div className="card mt-6 p-6">
         <CreateStaffForm />
       </div>
-    </div>
+    </PageShell>
   );
 }

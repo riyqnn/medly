@@ -1,66 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { UtensilsCrossed, Check } from "lucide-react";
+import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { MEAL_SCHEDULES, MEAL_ORDER_STATUS, formatRupiah } from "@/src/features/shell/constants";
+import { cn } from "@/src/lib/utils";
 
 interface Menu {
   id: string;
   name: string;
   description: string | null;
   price: number;
-  meal_type_tags: string[];
+  image_url: string | null;
+  meal_type_tags: string[] | null;
   meal_categories?: { name: string } | null;
 }
-
 interface Order {
   id: string;
   meal_schedule: string;
   order_date: string;
   status: string;
-  patient_notes: string | null;
-  created_at: string;
   meal_menus: { name: string; price: number } | null;
 }
 
-const SCHEDULES = [
-  { value: "BREAKFAST", label: "Sarapan" },
-  { value: "LUNCH", label: "Makan Siang" },
-  { value: "DINNER", label: "Makan Malam" },
-];
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "Menunggu", color: "bg-yellow-100 text-yellow-700" },
-  PREPARING: { label: "Disiapkan", color: "bg-blue-100 text-blue-700" },
-  DELIVERED: { label: "Terkirim", color: "bg-green-100 text-green-700" },
-  REJECTED: { label: "Ditolak", color: "bg-red-100 text-red-700" },
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+/** Default to the sitting the patient is most likely ordering for right now. */
+function currentSitting() {
+  const h = new Date().getHours();
+  if (h < 10) return "BREAKFAST";
+  if (h < 15) return "LUNCH";
+  return "DINNER";
 }
 
 export default function MealsPage() {
   const { admissionId } = useParams<{ admissionId: string }>();
   const [menus, setMenus] = useState<Menu[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [schedule, setSchedule] = useState("BREAKFAST");
+  const [sitting, setSitting] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [ordering, setOrdering] = useState<string | null>(null);
+  const [justOrdered, setJustOrdered] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, [admissionId]);
-
-  async function load() {
-    setLoading(true);
-    const [mRes, oRes] = await Promise.all([
+  const load = useCallback(async () => {
+    const [m, o] = await Promise.all([
       fetch(`/api/patient/meal-menus?admission_id=${admissionId}`),
       fetch(`/api/patient/meal-orders?admission_id=${admissionId}`),
     ]);
-    if (mRes.ok) setMenus(await mRes.json());
-    if (oRes.ok) setOrders(await oRes.json());
+    if (m.ok) setMenus(await m.json());
+    if (o.ok) setOrders(await o.json());
     setLoading(false);
-  }
+  }, [admissionId]);
 
-  async function placeOrder(menuId: string) {
+  useEffect(() => {
+    setSitting(currentSitting());
+    load();
+  }, [load]);
+
+  async function order(menuId: string) {
     setOrdering(menuId);
     const res = await fetch("/api/patient/meal-orders", {
       method: "POST",
@@ -68,94 +69,137 @@ export default function MealsPage() {
       body: JSON.stringify({
         admission_id: admissionId,
         menu_id: menuId,
-        meal_schedule: schedule,
+        meal_schedule: sitting,
         order_date: todayStr(),
       }),
     });
     setOrdering(null);
     if (res.ok) {
+      setJustOrdered(menuId);
+      setTimeout(() => setJustOrdered(null), 2600);
       load();
     } else {
       const d = await res.json();
-      alert(d.error || "Gagal memesan");
+      alert(d.error ?? "Gagal memesan");
     }
   }
 
-  const filteredMenus = menus.filter((m) => !m.meal_type_tags?.length || m.meal_type_tags.includes(schedule));
+  if (loading || !sitting) return <BedsideLoading />;
 
-  if (loading) return <div className="text-gray-500">Memuat...</div>;
+  const available = menus.filter(
+    (m) => !m.meal_type_tags?.length || m.meal_type_tags.includes(sitting)
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Menu Hari Ini</h2>
-        <div className="flex gap-2 mb-5">
-          {SCHEDULES.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => setSchedule(s.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                schedule === s.value ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-4">
+      <BedsideHeader title="Pesan Makanan" description="Menu yang tersedia untuk Anda hari ini." />
 
-        {filteredMenus.length === 0 ? (
-          <p className="text-sm text-gray-400">Belum ada menu untuk sesi ini.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredMenus.map((m) => (
-              <div key={m.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{m.name}</h3>
+      {/* Sitting switcher */}
+      <div className="inline-flex rounded-full border border-line bg-white p-1 shadow-card">
+        {MEAL_SCHEDULES.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => setSitting(s.value)}
+            className={cn(
+              "rounded-full px-5 py-2 text-sm font-bold transition-all duration-200",
+              sitting === s.value
+                ? "bg-brand-500 text-white shadow-sm shadow-brand-500/30"
+                : "text-ink-soft hover:text-brand-700"
+            )}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {available.length === 0 ? (
+        <BedsideCard>
+          <BedsideEmpty>Belum ada menu untuk sesi ini.</BedsideEmpty>
+        </BedsideCard>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {available.map((m, i) => {
+            const done = justOrdered === m.id;
+            return (
+              <article
+                key={m.id}
+                style={{ animationDelay: `${i * 45}ms` }}
+                className="card flex animate-fade-up flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
+              >
+                <div className="relative grid h-32 place-items-center overflow-hidden bg-brand-50">
+                  {m.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.image_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <UtensilsCrossed className="h-8 w-8 text-brand-300" strokeWidth={1.6} />
+                  )}
                   {m.meal_categories?.name && (
-                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-ink backdrop-blur">
                       {m.meal_categories.name}
                     </span>
                   )}
                 </div>
-                {m.description && <p className="text-xs text-gray-500 mt-1">{m.description}</p>}
-                <div className="mt-auto pt-3 flex items-center justify-between">
-                  <span className="font-semibold text-blue-600">Rp {Number(m.price ?? 0).toLocaleString("id-ID")}</span>
-                  <button
-                    onClick={() => placeOrder(m.id)}
-                    disabled={ordering === m.id}
-                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {ordering === m.id ? "Memesan..." : "Pesan"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Status Pesanan</h2>
-        {orders.length === 0 ? (
-          <p className="text-sm text-gray-400">Belum ada pesanan.</p>
-        ) : (
-          <div className="space-y-2">
-            {orders.map((o) => {
-              const st = STATUS_LABELS[o.status] || { label: o.status, color: "bg-gray-100 text-gray-600" };
-              const scheduleLabel = SCHEDULES.find((s) => s.value === o.meal_schedule)?.label || o.meal_schedule;
-              return (
-                <div key={o.id} className="flex items-center justify-between text-sm border-b border-gray-100 dark:border-gray-800 pb-2 last:border-0">
-                  <div>
-                    <p className="font-medium">{o.meal_menus?.name || "-"}</p>
-                    <p className="text-xs text-gray-500">{o.order_date} — {scheduleLabel}</p>
+                <div className="flex flex-1 flex-col p-5">
+                  <h2 className="text-[15px] font-extrabold leading-snug text-ink">{m.name}</h2>
+                  {m.description && (
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-soft">{m.description}</p>
+                  )}
+                  <div className="mt-4 flex items-center justify-between gap-3 pt-1">
+                    <span className="tabular text-sm font-extrabold text-ink">
+                      {Number(m.price) > 0 ? formatRupiah(m.price) : "Termasuk perawatan"}
+                    </span>
+                    <button
+                      onClick={() => order(m.id)}
+                      disabled={ordering === m.id || done}
+                      className={cn("btn-primary px-4 py-2 text-xs", done && "bg-brand-600")}
+                    >
+                      {done ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" /> Dipesan
+                        </>
+                      ) : ordering === m.id ? (
+                        "Memesan…"
+                      ) : (
+                        "Pesan"
+                      )}
+                    </button>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${st.color}`}>{st.label}</span>
                 </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      <BedsideCard title="Status pesanan">
+        {orders.length === 0 ? (
+          <BedsideEmpty>Anda belum memesan makanan.</BedsideEmpty>
+        ) : (
+          <ul className="divide-y divide-line">
+            {orders.slice(0, 8).map((o) => {
+              const st = MEAL_ORDER_STATUS[o.status];
+              const sittingLabel =
+                MEAL_SCHEDULES.find((s) => s.value === o.meal_schedule)?.label ?? o.meal_schedule;
+              return (
+                <li key={o.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold text-ink">{o.meal_menus?.name ?? "—"}</p>
+                    <p className="tabular text-xs text-ink-mute">
+                      {new Date(o.order_date).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}{" "}
+                      · {sittingLabel}
+                    </p>
+                  </div>
+                  <span className={cn("chip", st?.chip)}>{st?.label ?? o.status}</span>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </BedsideCard>
     </div>
   );
 }

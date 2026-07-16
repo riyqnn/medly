@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PlusIcon, MonitorPlay } from "lucide-react";
+import { Plus, Search, MonitorPlay, Pencil, Trash2, Users } from "lucide-react";
+import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { cn } from "@/src/lib/utils";
 
 interface Patient {
   id: string;
@@ -11,27 +13,34 @@ interface Patient {
   dob: string | null;
   gender: string | null;
 }
-
 interface ActiveAdmission {
   id: string;
   patient_id: string;
+  rooms?: { room_number: string } | null;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  DISCHARGED: "bg-gray-100 text-gray-600",
-  TRANSFERRED: "bg-yellow-100 text-yellow-700",
-  DECEASED: "bg-red-100 text-red-700",
+const age = (dob: string | null) => {
+  if (!dob) return null;
+  const d = new Date(dob);
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a;
 };
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [activeAdmissionByPatient, setActiveAdmissionByPatient] = useState<Record<string, string>>({});
+  const [admissions, setAdmissions] = useState<Record<string, ActiveAdmission>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => { fetchPatients(); }, [search]);
+  useEffect(() => {
+    const t = setTimeout(fetchPatients, search ? 250 : 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   async function fetchPatients() {
     setLoading(true);
@@ -42,88 +51,156 @@ export default function PatientsPage() {
     ]);
     if (pRes.ok) setPatients(await pRes.json());
     if (aRes.ok) {
-      const admissions: ActiveAdmission[] = await aRes.json();
-      const map: Record<string, string> = {};
-      admissions.forEach((a) => { map[a.patient_id] = a.id; });
-      setActiveAdmissionByPatient(map);
+      const rows: ActiveAdmission[] = await aRes.json();
+      setAdmissions(Object.fromEntries(rows.map((a) => [a.patient_id, a])));
     }
     setLoading(false);
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Soft-delete this patient record?")) return;
+    if (!confirm("Hapus data pasien ini?")) return;
     setDeleting(id);
     await fetch(`/api/patients/${id}`, { method: "DELETE" });
     setDeleting(null);
     fetchPatients();
   }
 
-  return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Patient Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage active patient admissions and registrations</p>
-        </div>
-        <Link href="/dashboard/hospital/patients/create" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          <PlusIcon className="w-5 h-5" /> Register Patient
-        </Link>
-      </div>
+  const admittedCount = patients.filter((p) => admissions[p.id]).length;
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-          <input
-            type="text" placeholder="Search by name..."
-            className="w-full max-w-sm px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={search} onChange={(e) => setSearch(e.target.value)}
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow="Perawatan"
+        title="Pasien"
+        description={
+          loading
+            ? "Memuat data pasien…"
+            : `${patients.length} pasien terdaftar · ${admittedCount} sedang dirawat`
+        }
+        action={
+          <Link href="/dashboard/hospital/patients/create" className="btn-primary">
+            <Plus className="h-4 w-4" /> Daftarkan pasien
+          </Link>
+        }
+      />
+
+      <div className="card overflow-hidden">
+        <div className="border-b border-line p-4">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-mute" />
+            <input
+              type="search"
+              placeholder="Cari nama pasien…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="field pl-10"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <Loading label="Memuat pasien…" />
+        ) : patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={search ? "Pasien tidak ditemukan" : "Belum ada pasien"}
+            hint={
+              search
+                ? "Coba kata kunci lain."
+                : "Daftarkan pasien pertama Anda untuk mulai menggunakan Medly."
+            }
+            action={
+              !search && (
+                <Link href="/dashboard/hospital/patients/create" className="btn-primary">
+                  <Plus className="h-4 w-4" /> Daftarkan pasien
+                </Link>
+              )
+            }
           />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-800/50">
-              <tr>
-                <th className="px-6 py-4">MRN</th>
-                <th className="px-6 py-4">Full Name</th>
-                <th className="px-6 py-4">DOB</th>
-                <th className="px-6 py-4">Gender</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center">Loading...</td></tr>
-              ) : patients.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400">No patients found</td></tr>
-              ) : patients.map((p) => (
-                <tr key={p.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-6 py-4 font-mono font-medium text-gray-900 dark:text-white">{p.mrn}</td>
-                  <td className="px-6 py-4 font-medium">{p.full_name}</td>
-                  <td className="px-6 py-4">{p.dob || "-"}</td>
-                  <td className="px-6 py-4 capitalize">{p.gender || "-"}</td>
-                  <td className="px-6 py-4 text-right flex gap-3 justify-end items-center">
-                    {activeAdmissionByPatient[p.id] && (
-                      <a
-                        href={`/patient/${activeAdmissionByPatient[p.id]}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-green-600 hover:underline"
-                        title="Buka screen tablet Careo untuk pasien ini"
-                      >
-                        <MonitorPlay className="w-4 h-4" /> Tampilkan
-                      </a>
-                    )}
-                    <Link href={`/dashboard/hospital/patients/${p.id}`} className="text-blue-600 hover:underline">View</Link>
-                    <Link href={`/dashboard/hospital/patients/${p.id}/edit`} className="text-indigo-600 hover:underline">Edit</Link>
-                    <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id} className="text-red-500 hover:underline disabled:opacity-50">
-                      {deleting === p.id ? "..." : "Delete"}
-                    </button>
-                  </td>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-line bg-canvas/60">
+                  <th className="eyebrow px-6 py-3 font-bold">Pasien</th>
+                  <th className="eyebrow px-6 py-3 font-bold">MRN</th>
+                  <th className="eyebrow px-6 py-3 font-bold">Usia / Gender</th>
+                  <th className="eyebrow px-6 py-3 font-bold">Status</th>
+                  <th className="eyebrow px-6 py-3 text-right font-bold">Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {patients.map((p) => {
+                  const adm = admissions[p.id];
+                  const a = age(p.dob);
+                  return (
+                    <tr key={p.id} className="group transition-colors hover:bg-canvas/70">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-[11px] font-extrabold text-brand-700">
+                            {p.full_name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <Link
+                            href={`/dashboard/hospital/patients/${p.id}`}
+                            className="font-bold text-ink transition hover:text-brand-600"
+                          >
+                            {p.full_name}
+                          </Link>
+                        </div>
+                      </td>
+                      <td className="tabular px-6 py-4 font-semibold text-ink-soft">{p.mrn}</td>
+                      <td className="px-6 py-4 text-ink-soft">
+                        {a !== null ? `${a} th` : "—"}
+                        {p.gender ? ` · ${p.gender === "male" ? "L" : "P"}` : ""}
+                      </td>
+                      <td className="px-6 py-4">
+                        {adm ? (
+                          <span className="chip bg-brand-50 text-brand-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+                            Dirawat{adm.rooms?.room_number ? ` · ${adm.rooms.room_number}` : ""}
+                          </span>
+                        ) : (
+                          <span className="chip bg-canvas text-ink-mute">Tidak dirawat</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          {adm && (
+                            <a
+                              href={`/patient/${adm.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Buka layar tablet pasien ini"
+                              className="mr-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-bold text-brand-700 transition hover:bg-brand-500 hover:text-white"
+                            >
+                              <MonitorPlay className="h-3.5 w-3.5" /> Tampilkan
+                            </a>
+                          )}
+                          <Link
+                            href={`/dashboard/hospital/patients/${p.id}/edit`}
+                            title="Ubah"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            disabled={deleting === p.id}
+                            title="Hapus"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-    </div>
+    </PageShell>
   );
 }

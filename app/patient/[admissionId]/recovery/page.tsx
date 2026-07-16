@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { CheckCircle2, Circle } from "lucide-react";
+import { Check } from "lucide-react";
+import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { cn } from "@/src/lib/utils";
 
 interface ChecklistItem {
   id: string;
@@ -10,7 +12,6 @@ interface ChecklistItem {
   target_date: string | null;
   is_done: boolean;
 }
-
 interface Progress {
   id: string;
   estimated_total_days: number | null;
@@ -23,89 +24,167 @@ export default function RecoveryPage() {
   const { admissionId } = useParams<{ admissionId: string }>();
   const [progress, setProgress] = useState<Progress | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, [admissionId]);
-
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async () => {
     const res = await fetch(`/api/patient/recovery-progress?admission_id=${admissionId}`);
     if (res.ok) setProgress(await res.json());
     setLoading(false);
-  }
+  }, [admissionId]);
 
-  async function toggleItem(item: ChecklistItem) {
-    setToggling(item.id);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function toggle(item: ChecklistItem) {
+    setBusy(item.id);
+    // Optimistic: ticking a box should feel instant at the bedside.
+    setProgress((p) =>
+      p
+        ? {
+            ...p,
+            recovery_checklist_items: p.recovery_checklist_items.map((i) =>
+              i.id === item.id ? { ...i, is_done: !i.is_done } : i
+            ),
+          }
+        : p
+    );
     await fetch(`/api/patient/recovery-progress/checklist/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ admission_id: admissionId, is_done: !item.is_done }),
     });
-    setToggling(null);
+    setBusy(null);
     load();
   }
 
-  if (loading) return <div className="text-gray-500">Memuat...</div>;
+  if (loading) return <BedsideLoading />;
 
   if (!progress) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Progres Pemulihan</h2>
-        <p className="text-sm text-gray-400">Belum ada data progres pemulihan dari tim medis.</p>
+      <div className="space-y-4">
+        <BedsideHeader title="Progres Pemulihan" />
+        <BedsideCard>
+          <BedsideEmpty>
+            Tim medis belum menetapkan target pemulihan untuk Anda.
+          </BedsideEmpty>
+        </BedsideCard>
       </div>
     );
   }
 
-  const pct = progress.estimated_total_days
+  const items = progress.recovery_checklist_items ?? [];
+  const done = items.filter((i) => i.is_done).length;
+  const dayPct = progress.estimated_total_days
     ? Math.min(100, Math.round((progress.current_day / progress.estimated_total_days) * 100))
-    : 0;
-  const items = progress.recovery_checklist_items || [];
-  const doneCount = items.filter((i) => i.is_done).length;
+    : null;
+  const taskPct = items.length ? Math.round((done / items.length) * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Progres Pemulihan</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Hari ke-{progress.current_day}{progress.estimated_total_days ? ` dari estimasi ${progress.estimated_total_days} hari` : ""}
-        </p>
-        {progress.estimated_total_days && (
-          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-2">
-            <div className="bg-blue-600 h-3 rounded-full transition-all" style={{ width: `${pct}%` }} />
-          </div>
-        )}
-        {progress.notes && <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">{progress.notes}</p>}
-      </div>
+    <div className="space-y-4">
+      <BedsideHeader title="Progres Pemulihan" description="Setiap langkah kecil membawa Anda lebih dekat pulang." />
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">Checklist Aktivitas</h2>
-          <span className="text-xs text-gray-500">{doneCount}/{items.length} selesai</span>
-        </div>
-        {items.length === 0 ? (
-          <p className="text-sm text-gray-400">Belum ada target aktivitas dari tenaga kesehatan.</p>
-        ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => toggleItem(item)}
-                disabled={toggling === item.id}
-                className="flex items-center gap-3 w-full text-left p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
-              >
-                {item.is_done ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                ) : (
-                  <Circle className="w-5 h-5 text-gray-300 shrink-0" />
-                )}
-                <span className={`text-sm ${item.is_done ? "line-through text-gray-400" : "text-gray-900 dark:text-white"}`}>
-                  {item.title}
-                </span>
-                {item.target_date && <span className="ml-auto text-xs text-gray-400">{item.target_date}</span>}
-              </button>
-            ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        {/* The ring is the one flourish on this screen — it's the number the
+            patient actually came here to see. */}
+        <BedsideCard className="flex flex-col items-center justify-center py-8">
+          <div className="relative grid h-44 w-44 place-items-center">
+            <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90">
+              <circle cx="50" cy="50" r="43" fill="none" stroke="var(--color-canvas)" strokeWidth="10" />
+              <circle
+                cx="50"
+                cy="50"
+                r="43"
+                fill="none"
+                stroke="var(--color-brand-500)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 43}
+                strokeDashoffset={2 * Math.PI * 43 * (1 - (dayPct ?? 0) / 100)}
+                className="transition-[stroke-dashoffset] duration-1000 ease-out"
+              />
+            </svg>
+            <div className="text-center">
+              <p className="tabular text-4xl font-extrabold tracking-tight text-ink">
+                Hari {progress.current_day}
+              </p>
+              <p className="mt-0.5 text-xs font-bold text-ink-mute">
+                {progress.estimated_total_days ? `dari ${progress.estimated_total_days} hari` : "masa rawat"}
+              </p>
+            </div>
           </div>
-        )}
+          {progress.notes && (
+            <p className="mt-6 max-w-xs text-center text-sm leading-relaxed text-ink-soft">
+              “{progress.notes}”
+            </p>
+          )}
+        </BedsideCard>
+
+        <BedsideCard
+          title="Checklist aktivitas"
+          action={
+            <span className="tabular text-[11px] font-bold text-brand-600">
+              {done}/{items.length} selesai
+            </span>
+          }
+        >
+          {items.length === 0 ? (
+            <BedsideEmpty>Belum ada target aktivitas dari tenaga kesehatan.</BedsideEmpty>
+          ) : (
+            <>
+              <div className="mb-5 h-2 overflow-hidden rounded-full bg-canvas">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-[width] duration-700 ease-out"
+                  style={{ width: `${taskPct}%` }}
+                />
+              </div>
+              <ul className="space-y-2">
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => toggle(item)}
+                      disabled={busy === item.id}
+                      className="group flex w-full items-center gap-3.5 rounded-2xl border border-line p-3.5 text-left transition duration-200 hover:border-brand-200 hover:bg-brand-50/50 active:scale-[0.99]"
+                    >
+                      <span
+                        className={cn(
+                          "grid h-6 w-6 shrink-0 place-items-center rounded-lg border-2 transition-all duration-200",
+                          item.is_done
+                            ? "border-brand-500 bg-brand-500 text-white"
+                            : "border-line bg-white group-hover:border-brand-300"
+                        )}
+                      >
+                        <Check
+                          className={cn(
+                            "h-3.5 w-3.5 transition-transform duration-200",
+                            item.is_done ? "scale-100" : "scale-0"
+                          )}
+                          strokeWidth={3.5}
+                        />
+                      </span>
+                      <span
+                        className={cn(
+                          "flex-1 text-sm font-bold transition",
+                          item.is_done ? "text-ink-mute line-through" : "text-ink"
+                        )}
+                      >
+                        {item.title}
+                      </span>
+                      {item.target_date && (
+                        <span className="tabular text-[11px] font-semibold text-ink-mute">
+                          {new Date(item.target_date).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </BedsideCard>
       </div>
     </div>
   );

@@ -1,8 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { createStaff } from "@/src/features/auth/actions";
 import { useRouter } from "next/navigation";
+import { Stethoscope, HeartPulse, Check } from "lucide-react";
+import { createStaff } from "@/src/features/auth/actions";
+import { cn } from "@/src/lib/utils";
+
+const ROLES = [
+  { value: "DOCTOR", label: "Dokter", icon: Stethoscope },
+  { value: "NURSE", label: "Perawat", icon: HeartPulse },
+] as const;
 
 export function CreateStaffForm() {
   const router = useRouter();
@@ -21,21 +28,19 @@ export function CreateStaffForm() {
     setSuccess(false);
 
     if (!fullName || !email || !password) {
-      setError("All fields are required.");
+      setError("Nama, email, dan kata sandi wajib diisi.");
       setLoading(false);
       return;
     }
-
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError("Kata sandi minimal 6 karakter.");
       setLoading(false);
       return;
     }
 
     const result = await createStaff({ fullName, email, password, role });
-
     if (!result.success) {
-      setError(result.error ?? "Something went wrong.");
+      setError(result.error ?? "Terjadi kesalahan.");
     } else {
       setSuccess(true);
       setFullName("");
@@ -44,95 +49,93 @@ export function CreateStaffForm() {
       setRole("DOCTOR");
       router.refresh();
     }
-
     setLoading(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Full Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+        <span className="label">Peran</span>
+        <div className="grid grid-cols-2 gap-3">
+          {ROLES.map((r) => (
+            <button
+              key={r.value}
+              type="button"
+              onClick={() => setRole(r.value)}
+              aria-pressed={role === r.value}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-bold transition duration-200 active:scale-[0.98]",
+                role === r.value
+                  ? "border-brand-500 bg-brand-500 text-white shadow-sm shadow-brand-500/25"
+                  : "border-line bg-white text-ink-soft hover:border-brand-200 hover:bg-brand-50"
+              )}
+            >
+              <r.icon className="h-4 w-4" strokeWidth={2.2} />
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="staff-name" className="label">
+          Nama lengkap
+        </label>
         <input
+          id="staff-name"
           type="text"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          placeholder="Dr. John Doe"
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          placeholder={role === "DOCTOR" ? "dr. Siti Aminah" : "Ns. Rani Putri"}
+          className="field"
         />
+        <p className="mt-1.5 text-xs text-ink-mute">
+          Gunakan nama yang sama dengan data {role === "DOCTOR" ? "dokter" : "perawat"} agar portalnya
+          mengenali akun ini.
+        </p>
       </div>
 
-      {/* Role */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => setRole("DOCTOR")}
-            className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
-              role === "DOCTOR"
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-blue-400"
-            }`}
-          >
-            🩺 Doctor
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole("NURSE")}
-            className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
-              role === "NURSE"
-                ? "bg-green-600 text-white border-green-600"
-                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-green-400"
-            }`}
-          >
-            🏥 Nurse
-          </button>
-        </div>
-      </div>
-
-      {/* Email */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+        <label htmlFor="staff-email" className="label">
+          Email
+        </label>
         <input
+          id="staff-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="doctor@hospital.com"
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          placeholder="nama@rumahsakit.id"
+          className="field"
         />
       </div>
 
-      {/* Password */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+        <label htmlFor="staff-password" className="label">
+          Kata sandi
+        </label>
         <input
+          id="staff-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Min. 6 characters"
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          placeholder="Minimal 6 karakter"
+          className="field"
         />
       </div>
 
-      {/* Error / Success */}
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800">
+        <p className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-600">
           {error}
-        </div>
+        </p>
       )}
       {success && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-lg border border-green-200 dark:border-green-800">
-          ✓ Staff account created successfully!
-        </div>
+        <p className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2.5 text-sm font-semibold text-brand-700">
+          <Check className="h-4 w-4" /> Akun staf berhasil dibuat.
+        </p>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? "Creating..." : "Create Account"}
+      <button type="submit" disabled={loading} className="btn-primary w-full">
+        {loading ? "Membuat akun…" : "Buat akun"}
       </button>
     </form>
   );

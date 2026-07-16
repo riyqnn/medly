@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogoutButton } from "@/src/features/auth/components/LogoutButton";
+import { BedDouble, CalendarClock } from "lucide-react";
+import { PortalHeader } from "@/src/features/shell/components/PortalHeader";
+import { EmptyState, Loading } from "@/src/features/shell/components/Page";
 import { createClient } from "@/src/features/auth/utils/supabase/client";
+import { cn } from "@/src/lib/utils";
 
 interface PatientAssignment {
   id: string;
@@ -25,167 +28,187 @@ interface DoctorSchedule {
   status: string;
 }
 
+const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
 export default function DoctorDashboard() {
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [patients, setPatients] = useState<PatientAssignment[]>([]);
   const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-
-  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   useEffect(() => {
-    async function init() {
-      // 1. Identify logged-in doctor
-      const { data: { user } } = await supabase.auth.getUser();
+    const supabase = createClient();
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase.from("profiles").select("full_name, hospital_id").eq("id", user.id).single();
-      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, hospital_id")
+        .eq("id", user.id)
+        .single();
+
       if (profile) {
-        // Naive match by name or fallback to first doctor
-        const { data: doctors } = await supabase.from("doctors").select("id").eq("hospital_id", profile.hospital_id);
+        const { data: doctors } = await supabase
+          .from("doctors")
+          .select("id, full_name")
+          .eq("hospital_id", profile.hospital_id);
         if (doctors && doctors.length > 0) {
-          const matched = doctors.find((d: any) => d.full_name === profile.full_name) || doctors[0];
+          const matched = doctors.find((d: any) => d.full_name === profile.full_name) ?? doctors[0];
           setDoctorId(matched.id);
+        } else {
+          setLoading(false);
         }
       }
-    }
-    init();
+    })();
   }, []);
 
   useEffect(() => {
     if (!doctorId) return;
-    
-    async function loadData() {
+    (async () => {
       setLoading(true);
-      try {
-        const [patRes, schedRes] = await Promise.all([
-          fetch(`/api/patient-doctor-assignments?doctor_id=${doctorId}`),
-          fetch(`/api/doctor-schedules?doctor_id=${doctorId}`)
-        ]);
-
-        if (patRes.ok) {
-            const data = await patRes.json();
-            // Filter only active admissions
-            setPatients(data.filter((d: any) => d.patient_admissions?.status === 'ACTIVE'));
-        }
-        if (schedRes.ok) setSchedules(await schedRes.json());
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+      const [patRes, schedRes] = await Promise.all([
+        fetch(`/api/patient-doctor-assignments?doctor_id=${doctorId}`),
+        fetch(`/api/doctor-schedules?doctor_id=${doctorId}`),
+      ]);
+      if (patRes.ok) {
+        const data = await patRes.json();
+        setPatients(data.filter((d: any) => d.patient_admissions?.status === "ACTIVE"));
       }
-    }
-    loadData();
+      if (schedRes.ok) setSchedules(await schedRes.json());
+      setLoading(false);
+    })();
   }, [doctorId]);
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
-      <header className="flex justify-between items-center mb-8 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Doctor Portal</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your patients, treatments, and schedules</p>
-        </div>
-        <LogoutButton />
-      </header>
+    <div className="min-h-screen bg-canvas">
+      <PortalHeader
+        role="Portal dokter"
+        title="Pasien & Jadwal Saya"
+        subtitle="Pasien rawat inap yang ditugaskan kepada Anda."
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Column: My Patients */}
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className="text-2xl">🛏️</span> My Admitted Patients
-          </h2>
-          
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Patient Info</th>
-                  <th className="px-6 py-4 font-medium">Location</th>
-                  <th className="px-6 py-4 font-medium">My Role</th>
-                  <th className="px-6 py-4 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                {loading ? (
-                  <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Loading patients...</td></tr>
-                ) : patients.length === 0 ? (
-                  <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">No active patients assigned to you.</td></tr>
-                ) : patients.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 dark:text-white">{p.patient_admissions?.patients?.full_name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">MRN: {p.patient_admissions?.patients?.mrn}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium">{p.patient_admissions?.rooms?.room_number}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{p.patient_admissions?.rooms?.ward_name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-[10px] font-bold rounded-md ${p.role === 'MAIN_DOCTOR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                        {p.role.replace('_', ' ')}
+      <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section>
+            <h2 className="eyebrow mb-4">Pasien rawat inap saya</h2>
+            <div className="card overflow-hidden">
+              {loading ? (
+                <Loading label="Memuat pasien…" />
+              ) : patients.length === 0 ? (
+                <EmptyState
+                  icon={BedDouble}
+                  title="Belum ada pasien"
+                  hint="Pasien yang ditugaskan admin kepada Anda akan muncul di sini."
+                />
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-canvas/60">
+                      <th className="eyebrow px-6 py-3 font-bold">Pasien</th>
+                      <th className="eyebrow px-6 py-3 font-bold">Lokasi</th>
+                      <th className="eyebrow px-6 py-3 font-bold">Peran saya</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {patients.map((p) => (
+                      <tr key={p.id} className="transition-colors hover:bg-canvas/70">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-[11px] font-extrabold text-brand-700">
+                              {(p.patient_admissions?.patients?.full_name ?? "?")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </span>
+                            <div>
+                              <p className="font-bold text-ink">
+                                {p.patient_admissions?.patients?.full_name}
+                              </p>
+                              <p className="tabular text-xs text-ink-mute">
+                                MRN {p.patient_admissions?.patients?.mrn}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-ink">
+                            {p.patient_admissions?.rooms?.room_number ?? "—"}
+                          </p>
+                          <p className="text-xs text-ink-mute">
+                            {p.patient_admissions?.rooms?.ward_name ?? "—"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={cn(
+                              "chip",
+                              p.role === "MAIN_DOCTOR"
+                                ? "bg-brand-50 text-brand-700"
+                                : "bg-violet-50 text-violet-700"
+                            )}
+                          >
+                            {p.role === "MAIN_DOCTOR" ? "DPJP" : "Konsulen"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+
+          <aside>
+            <h2 className="eyebrow mb-4">Jadwal praktik saya</h2>
+            <div className="card p-5">
+              {loading ? (
+                <Loading label="Memuat jadwal…" />
+              ) : schedules.length === 0 ? (
+                <EmptyState icon={CalendarClock} title="Belum ada jadwal praktik" />
+              ) : (
+                <ul className="space-y-3">
+                  {schedules.map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex gap-3.5 border-b border-line pb-3 last:border-0 last:pb-0"
+                    >
+                      <span className="grid h-12 w-12 shrink-0 place-content-center rounded-2xl bg-brand-50 text-center text-brand-700">
+                        {s.day_of_week !== null ? (
+                          <span className="text-[11px] font-extrabold">
+                            {DAYS[s.day_of_week].slice(0, 3)}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="tabular text-sm font-extrabold leading-none">
+                              {s.specific_date?.split("-")[2]}
+                            </span>
+                            <span className="mt-0.5 text-[9px] font-bold uppercase leading-none">
+                              {s.specific_date
+                                ? new Date(s.specific_date).toLocaleString("id-ID", { month: "short" })
+                                : ""}
+                            </span>
+                          </>
+                        )}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-blue-600 hover:text-blue-800 font-medium text-sm">View Med Rec</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Right Column: Schedules */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className="text-2xl">📅</span> My Schedule
-          </h2>
-          
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
-            {loading ? (
-              <div className="text-center text-gray-500 py-4">Loading schedule...</div>
-            ) : schedules.length === 0 ? (
-              <div className="text-center text-gray-500 py-4">No schedules configured.</div>
-            ) : (
-              <div className="space-y-4">
-                {schedules.map(s => (
-                  <div key={s.id} className="flex gap-4 items-start pb-4 border-b border-gray-100 dark:border-gray-800 last:border-0 last:pb-0">
-                    <div className="flex-shrink-0 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold">
-                      {s.day_of_week !== null ? (
-                        <span className="text-sm">{DAYS[s.day_of_week].substring(0, 3)}</span>
-                      ) : (
-                        <>
-                          <span className="text-xs">{s.specific_date?.split('-')[2]}</span>
-                          <span className="text-[9px] uppercase">{new Date(s.specific_date!).toLocaleString('en', {month: 'short'})}</span>
-                        </>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-bold text-gray-900 dark:text-white">
-                        {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
+                      <div className="min-w-0">
+                        <p className="tabular text-sm font-extrabold text-ink">
+                          {s.start_time.slice(0, 5)} – {s.end_time.slice(0, 5)}
+                        </p>
+                        <p className="truncate text-xs text-ink-soft">{s.location || "Lokasi belum diisi"}</p>
+                        {s.status !== "ACTIVE" && (
+                          <span className="chip mt-1 bg-amber-50 text-amber-700">{s.status}</span>
+                        )}
                       </div>
-                      <div className="text-sm text-gray-500">{s.location || 'Unknown Location'}</div>
-                      {s.status !== 'ACTIVE' && (
-                        <span className="inline-block mt-1 px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded">
-                          {s.status}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            <button className="w-full mt-6 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-              Request Schedule Change
-            </button>
-          </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
         </div>
-
-      </div>
+      </main>
     </div>
   );
 }

@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { PageShell } from "@/src/features/shell/components/Page";
+import { FormError } from "@/src/features/shell/components/Modal";
 
 export default function RegisterPatientPage() {
   const router = useRouter();
@@ -29,83 +33,109 @@ export default function RegisterPatientPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
       if (res.ok) {
-        router.push("/dashboard/hospital/patients");
+        const patient = await res.json();
+        // Straight to the record — the next step is almost always admitting them.
+        router.push(`/dashboard/hospital/patients/${patient.id}`);
         router.refresh();
       } else {
-        const data = await res.json();
-        setError(data.error || "Failed to register patient");
+        setError((await res.json()).error ?? "Gagal mendaftarkan pasien");
       }
     } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      setError(err.message ?? "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Register New Patient</h1>
-        <p className="text-sm text-gray-500 mt-1">Enter patient demographics and basic information</p>
-      </div>
+    <PageShell className="max-w-2xl">
+      <Link
+        href="/dashboard/hospital/patients"
+        className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-ink-soft transition hover:text-brand-600"
+      >
+        <ChevronLeft className="h-4 w-4" /> Semua pasien
+      </Link>
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-        {error && (
-          <div className="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900/30 dark:text-red-400">
-            {error}
-          </div>
-        )}
+      <h1 className="text-2xl font-extrabold tracking-tight text-ink">Daftarkan pasien</h1>
+      <p className="mt-1 text-sm text-ink-soft">
+        Setelah terdaftar, rawat inapkan pasien untuk membuka layar Medly di kamarnya.
+      </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">MRN (Medical Record Number) *</label>
-              <input required name="mrn" type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="e.g. MRN-12345" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
-              <input required name="full_name" type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Patient Full Name" />
-            </div>
-          </div>
+      <form onSubmit={handleSubmit} className="card mt-6 space-y-5 p-6">
+        <FormError>{error}</FormError>
 
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth</label>
-              <input name="dob" type="date" className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
-              <select name="gender" className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
-                <option value="">Select Gender...</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </div>
+        <div className="grid grid-cols-2 gap-5">
+          <div>
+            <label htmlFor="mrn" className="label">
+              Nomor rekam medis
+            </label>
+            <input id="mrn" required name="mrn" type="text" className="field" placeholder="MRN-12345" />
           </div>
+          <div>
+            <label htmlFor="full_name" className="label">
+              Nama lengkap
+            </label>
+            <input
+              id="full_name"
+              required
+              name="full_name"
+              type="text"
+              className="field"
+              placeholder="Budi Santoso"
+            />
+          </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
-              <input name="contact_number" type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="+62..." />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emergency Contact</label>
-              <input name="emergency_contact" type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="+62... (Spouse/Family)" />
-            </div>
+        <div className="grid grid-cols-2 gap-5">
+          <div>
+            <label htmlFor="dob" className="label">
+              Tanggal lahir
+            </label>
+            <input id="dob" name="dob" type="date" className="field" />
           </div>
+          <div>
+            <label htmlFor="gender" className="label">
+              Jenis kelamin
+            </label>
+            <select id="gender" name="gender" className="field">
+              <option value="">Pilih…</option>
+              <option value="male">Laki-laki</option>
+              <option value="female">Perempuan</option>
+            </select>
+          </div>
+        </div>
 
-          <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => router.back()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-              Cancel
-            </button>
-            <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              {loading ? "Registering..." : "Save Patient"}
-            </button>
+        <div className="grid grid-cols-2 gap-5">
+          <div>
+            <label htmlFor="contact_number" className="label">
+              Nomor kontak
+            </label>
+            <input id="contact_number" name="contact_number" type="tel" className="field" placeholder="+62…" />
           </div>
-        </form>
-      </div>
-    </div>
+          <div>
+            <label htmlFor="emergency_contact" className="label">
+              Kontak darurat
+            </label>
+            <input
+              id="emergency_contact"
+              name="emergency_contact"
+              type="tel"
+              className="field"
+              placeholder="+62… (keluarga)"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-line pt-5">
+          <Link href="/dashboard/hospital/patients" className="btn-ghost">
+            Batal
+          </Link>
+          <button type="submit" disabled={loading} className="btn-primary">
+            {loading ? "Menyimpan…" : "Daftarkan pasien"}
+          </button>
+        </div>
+      </form>
+    </PageShell>
   );
 }

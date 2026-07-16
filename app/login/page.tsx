@@ -1,9 +1,31 @@
+import Link from "next/link";
 import { LoginForm } from "@/src/features/auth/components/LoginForm";
+import { AuthShell } from "@/src/features/auth/components/AuthShell";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
+    <AuthShell
+      title="Masuk ke Medly"
+      subtitle="Kelola pasien, jadwal, dan layanan rawat inap Anda."
+      footer={
+        <>
+          Belum punya workspace?{" "}
+          <Link href="/register" className="row-link">
+            Daftarkan rumah sakit
+          </Link>
+        </>
+      }
+      pitch={{
+        heading: "Satu layar di sisi tempat tidur, terhubung ke seluruh rumah sakit.",
+        body: "Medly menghubungkan pasien dengan perawat, jadwal perawatan, makanan, edukasi, dan hiburan — semuanya bersumber dari sistem yang Anda kelola.",
+        points: [
+          "Permintaan pasien langsung masuk ke perawat",
+          "Jadwal dari HIS tampil otomatis di tablet",
+          "Pemesanan makanan tanpa menunggu petugas",
+        ],
+      }}
+    >
       <LoginForm />
-    </div>
+    </AuthShell>
   );
 }
