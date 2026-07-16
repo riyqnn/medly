@@ -9,6 +9,49 @@ async function getHospitalId(req: NextRequest, supabase: any) {
   return req.headers.get("x-hospital-id");
 }
 
+export async function GET(req: NextRequest) {
+  const supabase = await createClient();
+  const hospitalId = await getHospitalId(req, supabase);
+
+  if (!hospitalId) {
+    return NextResponse.json({ error: "Unauthorized: Missing hospital_id" }, { status: 401 });
+  }
+
+  const { searchParams } = req.nextUrl;
+  const admissionId = searchParams.get("admission_id");
+  const doctorId = searchParams.get("doctor_id");
+
+  let query = supabase
+    .from("patient_doctor_assignments")
+    .select(`
+      *,
+      doctors ( full_name, specialization ),
+      patient_admissions ( 
+        id, 
+        patients ( full_name, mrn ),
+        rooms ( room_number, ward_name )
+      )
+    `)
+    .eq("hospital_id", hospitalId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (admissionId) {
+    query = query.eq("admission_id", admissionId);
+  }
+  if (doctorId) {
+    query = query.eq("doctor_id", doctorId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const hospitalId = await getHospitalId(req, supabase);

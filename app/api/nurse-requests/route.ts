@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = req.nextUrl;
   const status = searchParams.get("status");
+  const nurseId = searchParams.get("nurse_id"); // Untuk filter riwayat per perawat
 
   let query = supabase
     .from("nurse_requests")
@@ -36,9 +37,13 @@ export async function GET(req: NextRequest) {
 
   if (status) {
     query = query.eq("status", status);
-  } else {
-    // Default: tampilkan yang belum selesai
+  } else if (!nurseId) {
+    // Default: tampilkan yang belum selesai (jika tidak sedang melihat history nurse tertentu)
     query = query.in("status", ["PENDING", "IN_PROGRESS"]);
+  }
+
+  if (nurseId) {
+    query = query.eq("handled_by_nurse_id", nurseId);
   }
 
   const { data: requests, error } = await query;

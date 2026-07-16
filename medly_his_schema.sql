@@ -1,4 +1,30 @@
+-- ==============================================================================
+-- MEDLY HIS (Hospital Information System) - Database Schema
+-- Architecture: Multi-Tenant per Hospital (PostgreSQL)
+-- ==============================================================================
 
+-- ==========================================
+-- DROP EXISTING TABLES (Reset Database)
+-- ==========================================
+DROP TABLE IF EXISTS profiles CASCADE;
+DROP TABLE IF EXISTS patient_activity_logs CASCADE;
+DROP TABLE IF EXISTS entertainment_contents CASCADE;
+DROP TABLE IF EXISTS education_contents CASCADE;
+DROP TABLE IF EXISTS education_categories CASCADE;
+DROP TABLE IF EXISTS meal_orders CASCADE;
+DROP TABLE IF EXISTS meal_menus CASCADE;
+DROP TABLE IF EXISTS meal_categories CASCADE;
+DROP TABLE IF EXISTS treatment_schedules CASCADE;
+DROP TABLE IF EXISTS nurse_requests CASCADE;
+DROP TABLE IF EXISTS nurse_shifts CASCADE;
+DROP TABLE IF EXISTS nurses CASCADE;
+DROP TABLE IF EXISTS patient_doctor_assignments CASCADE;
+DROP TABLE IF EXISTS doctor_schedules CASCADE;
+DROP TABLE IF EXISTS doctors CASCADE;
+DROP TABLE IF EXISTS patient_admissions CASCADE;
+DROP TABLE IF EXISTS patients CASCADE;
+DROP TABLE IF EXISTS rooms CASCADE;
+DROP TABLE IF EXISTS hospitals CASCADE;
 
 -- ==========================================
 -- 0. ROOT ENTITY (HOSPITALS)
@@ -77,6 +103,22 @@ CREATE TABLE doctors (
     created_by UUID,
     deleted_at TIMESTAMP WITH TIME ZONE,
     UNIQUE(hospital_id, employee_code)
+);
+
+CREATE TABLE doctor_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    doctor_id UUID NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+    day_of_week INT, -- 0 (Sun) to 6 (Sat) for recurring, NULL for specific dates
+    specific_date DATE, -- NULL for recurring
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    location VARCHAR, -- e.g., Poli Umum, Room 101
+    status VARCHAR DEFAULT 'ACTIVE', -- ACTIVE, ON_LEAVE, CANCELLED
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE patient_doctor_assignments (
