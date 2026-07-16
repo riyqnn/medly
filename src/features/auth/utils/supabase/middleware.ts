@@ -2,16 +2,14 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Admin client to bypass RLS when reading profiles in the proxy
+// Admin client to bypass RLS when reading profiles in middleware
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,9 +21,7 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
+          supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -34,62 +30,74 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isAuthRoute = pathname === '/login' || pathname === '/register'
-  const isProtectedRoute = pathname.startsWith('/dashboard')
 
-  // Unauthenticated user trying to access protected route
-  if (!user && isProtectedRoute) {
+  // Routes that bypass ALL session checks — always accessible
+  const isPublicRoute =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/unauthorized' ||
+    pathname === '/forbidden' ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon')
+
+  const isProtectedRoute =
+    pathname.startsWith('/dashboard') ||
+    (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/'))
+
+  // ── No session ──────────────────────────────────────────────
+  if (!user) {
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
+
+  // ── Has session — resolve role ──────────────────────────────
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  // Fallback: JWT user_metadata (set during register/createStaff)
+  const rawRole = profile?.role ?? user.user_metadata?.role
+  const role = rawRole?.toLowerCase()
+
+  // ── Stale session: valid JWT but NO role found anywhere ─────
+  // Force sign-out and clear all cookies so user can log in fresh
+  if (!role) {
+    await supabase.auth.signOut()
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    const response = NextResponse.redirect(url)
+    request.cookies.getAll().forEach((cookie) => {
+      response.cookies.delete(cookie.name)
+    })
+    return response
+  }
+
+  // ── Logged-in user on a public/auth page → redirect to dashboard
+  if (isPublicRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/dashboard/${role}`
     return NextResponse.redirect(url)
   }
 
-  if (user) {
-    // Fetch role using admin client to bypass RLS
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const role = profile?.role?.toLowerCase()
-
-    // Already logged in, redirect away from auth pages
-    if (isAuthRoute) {
+  // ── Dashboard RBAC ──────────────────────────────────────────
+  if (pathname.startsWith('/dashboard')) {
+    const allowedPath = `/dashboard/${role}`
+    if (!pathname.startsWith(allowedPath)) {
       const url = request.nextUrl.clone()
-      url.pathname = role ? `/dashboard/${role}` : '/unauthorized'
+      url.pathname = '/forbidden'
       return NextResponse.redirect(url)
-    }
-
-    // On /dashboard root — redirect to role-specific dashboard
-    if (pathname === '/dashboard') {
-      const url = request.nextUrl.clone()
-      url.pathname = role ? `/dashboard/${role}` : '/unauthorized'
-      return NextResponse.redirect(url)
-    }
-
-    // On a specific dashboard page — enforce RBAC
-    if (isProtectedRoute) {
-      if (!role) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/unauthorized'
-        return NextResponse.redirect(url)
-      }
-
-      const allowedPath = `/dashboard/${role}`
-      if (!pathname.startsWith(allowedPath)) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/forbidden'
-        return NextResponse.redirect(url)
-      }
     }
   }
 
   return supabaseResponse
 }
-

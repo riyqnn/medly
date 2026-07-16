@@ -37,11 +37,23 @@ export async function registerHospital(data: RegisterHospitalInput) {
 
   const supabase = await createClient();
 
-  // 1. Create user via Admin API — skips email confirmation entirely
+  // 1. First, create Hospital record using admin client
+  const { data: hospitalData, error: hospitalError } = await supabaseAdmin
+    .from("hospitals")
+    .insert([{ name: parsed.data.hospitalName }])
+    .select()
+    .single();
+
+  if (hospitalError || !hospitalData) {
+    return { success: false, error: "Failed to create hospital profile" };
+  }
+
+  // 2. Create user via Admin API with hospital_id in metadata
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: parsed.data.email,
     password: parsed.data.password,
-    email_confirm: true, // Auto-confirm, no email sent
+    email_confirm: true,
+    user_metadata: { hospital_id: hospitalData.id, role: "HOSPITAL" }
   });
 
   if (authError || !authData.user) {
@@ -58,18 +70,6 @@ export async function registerHospital(data: RegisterHospitalInput) {
     return { success: false, error: "Account created but failed to sign in. Please login manually." };
   }
 
-
-  // 2. Create Hospital record using admin client to bypass RLS
-  const { data: hospitalData, error: hospitalError } = await supabaseAdmin
-    .from("hospitals")
-    .insert([{ name: parsed.data.hospitalName }])
-    .select()
-    .single();
-
-  if (hospitalError || !hospitalData) {
-    // Note: In a real production system we should handle cleanup here
-    return { success: false, error: "Failed to create hospital profile" };
-  }
 
   // 3. Create Profile record linking user and hospital
   const { error: profileError } = await supabaseAdmin
@@ -132,6 +132,7 @@ export async function createStaff(data: {
     email: data.email,
     password: data.password,
     email_confirm: true,
+    user_metadata: { hospital_id: adminProfile.hospital_id, role: data.role }
   });
 
   if (authError || !authData.user) {
