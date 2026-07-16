@@ -1,0 +1,157 @@
+"use server";
+
+import { createClient } from "../utils/supabase/server";
+import { supabaseAdmin } from "../utils/supabase/admin";
+import { loginSchema, registerHospitalSchema, LoginInput, RegisterHospitalInput } from "../schemas";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+export async function login(data: LoginInput) {
+  // Validate input
+  const parsed = loginSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Invalid form data" };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    return { success: false, error: "Invalid email or password" };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+export async function registerHospital(data: RegisterHospitalInput) {
+  // Validate input
+  const parsed = registerHospitalSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Invalid form data" };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Create user via Admin API — skips email confirmation entirely
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    email_confirm: true, // Auto-confirm, no email sent
+  });
+
+  if (authError || !authData.user) {
+    return { success: false, error: authError?.message || "Failed to create account" };
+  }
+
+  // Sign the new user in immediately after creation
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+
+  if (signInError) {
+    return { success: false, error: "Account created but failed to sign in. Please login manually." };
+  }
+
+
+  // 2. Create Hospital record using admin client to bypass RLS
+  const { data: hospitalData, error: hospitalError } = await supabaseAdmin
+    .from("hospitals")
+    .insert([{ name: parsed.data.hospitalName }])
+    .select()
+    .single();
+
+  if (hospitalError || !hospitalData) {
+    // Note: In a real production system we should handle cleanup here
+    return { success: false, error: "Failed to create hospital profile" };
+  }
+
+  // 3. Create Profile record linking user and hospital
+  const { error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .insert([
+      {
+        id: authData.user.id,
+        hospital_id: hospitalData.id,
+        role: "HOSPITAL",
+        full_name: parsed.data.hospitalName,
+      },
+    ]);
+
+  if (profileError) {
+    return { success: false, error: "Failed to assign role to profile" };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+export async function logout() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login");
+}
+
+export async function createStaff(data: {
+  fullName: string;
+  email: string;
+  password: string;
+  role: "DOCTOR" | "NURSE";
+}) {
+  const supabase = await createClient();
+
+  // Get current logged-in user (hospital admin)
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { success: false, error: "Unauthorized. Please login again." };
+  }
+
+  // Get hospital_id from the hospital admin's profile
+  const { data: adminProfile, error: profileFetchError } = await supabaseAdmin
+    .from("profiles")
+    .select("hospital_id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileFetchError || !adminProfile) {
+    return { success: false, error: "Failed to fetch your hospital profile." };
+  }
+
+  if (adminProfile.role !== "HOSPITAL") {
+    return { success: false, error: "Only hospital admins can create staff." };
+  }
+
+  // Create the staff user via Admin API (no email sent)
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: data.email,
+    password: data.password,
+    email_confirm: true,
+  });
+
+  if (authError || !authData.user) {
+    return { success: false, error: authError?.message || "Failed to create user account." };
+  }
+
+  // Create profile for the new staff member
+  const { error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .insert([{
+      id: authData.user.id,
+      hospital_id: adminProfile.hospital_id,
+      full_name: data.fullName,
+      role: data.role,
+    }]);
+
+  if (profileError) {
+    return { success: false, error: "Failed to assign role to new staff." };
+  }
+
+  revalidatePath("/dashboard/hospital/staff");
+  return { success: true };
+}
