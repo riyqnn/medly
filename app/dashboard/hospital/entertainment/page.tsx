@@ -13,8 +13,8 @@ interface Content {
   display_order: number;
 }
 
-const CATEGORIES = ["MOVIE", "PODCAST", "GAME_LINK", "BANNER", "MUSIC", "BOOK"];
-const CAT_ICON: Record<string, string> = { MOVIE: "🎬", PODCAST: "🎙️", GAME_LINK: "🎮", BANNER: "📢", MUSIC: "🎵", BOOK: "📚" };
+const CATEGORIES = ["MOVIE", "TV", "MUSIC", "PODCAST", "EBOOK", "MAGAZINE", "GAME_LINK", "RELAXATION_VIDEO", "BANNER"];
+const CAT_ICON: Record<string, string> = { MOVIE: "🎬", TV: "📺", MUSIC: "🎵", PODCAST: "🎙️", EBOOK: "📖", MAGAZINE: "📰", GAME_LINK: "🎮", RELAXATION_VIDEO: "🌿", BANNER: "📢" };
 const EMPTY_FORM = { title: "", category: "MOVIE", media_url: "", display_order: 0, is_published: true };
 
 export default function EntertainmentPage() {

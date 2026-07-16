@@ -9,7 +9,8 @@ async function getHospitalId(req: NextRequest, supabase: any) {
   return req.headers.get("x-hospital-id");
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const hospitalId = await getHospitalId(req, supabase);
 
@@ -33,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           .eq("hospital_id", hospitalId)
           .eq("room_id", body.room_id)
           .eq("status", "ACTIVE")
-          .neq("id", params.id); // exclude current
+          .neq("id", id); // exclude current
 
         const { data: roomInfo } = await supabase
           .from("rooms")
@@ -47,6 +48,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    if (body.primary_diagnosis !== undefined) {
+      updateData.primary_diagnosis = body.primary_diagnosis;
+    }
+
     if (body.status !== undefined) {
       updateData.status = body.status;
       if (body.status === "DISCHARGED" || body.status === "DECEASED" || body.status === "TRANSFERRED") {
@@ -57,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { data: admission, error } = await supabase
       .from("patient_admissions")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("hospital_id", hospitalId)
       .select()
       .single();
@@ -72,7 +77,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         await supabase
             .from("treatment_schedules")
             .update({ status: 'CANCELLED' })
-            .eq("admission_id", params.id)
+            .eq("admission_id", id)
             .eq("status", "SCHEDULED")
             .gt("scheduled_time", new Date().toISOString());
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, MonitorPlay } from "lucide-react";
 
 interface Patient {
   id: string;
@@ -10,6 +10,11 @@ interface Patient {
   full_name: string;
   dob: string | null;
   gender: string | null;
+}
+
+interface ActiveAdmission {
+  id: string;
+  patient_id: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -21,6 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [activeAdmissionByPatient, setActiveAdmissionByPatient] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -30,8 +36,17 @@ export default function PatientsPage() {
   async function fetchPatients() {
     setLoading(true);
     const url = search ? `/api/patients?q=${encodeURIComponent(search)}` : "/api/patients";
-    const res = await fetch(url);
-    if (res.ok) setPatients(await res.json());
+    const [pRes, aRes] = await Promise.all([
+      fetch(url),
+      fetch("/api/patient-admissions?status=ACTIVE"),
+    ]);
+    if (pRes.ok) setPatients(await pRes.json());
+    if (aRes.ok) {
+      const admissions: ActiveAdmission[] = await aRes.json();
+      const map: Record<string, string> = {};
+      admissions.forEach((a) => { map[a.patient_id] = a.id; });
+      setActiveAdmissionByPatient(map);
+    }
     setLoading(false);
   }
 
@@ -85,7 +100,18 @@ export default function PatientsPage() {
                   <td className="px-6 py-4 font-medium">{p.full_name}</td>
                   <td className="px-6 py-4">{p.dob || "-"}</td>
                   <td className="px-6 py-4 capitalize">{p.gender || "-"}</td>
-                  <td className="px-6 py-4 text-right flex gap-3 justify-end">
+                  <td className="px-6 py-4 text-right flex gap-3 justify-end items-center">
+                    {activeAdmissionByPatient[p.id] && (
+                      <a
+                        href={`/patient/${activeAdmissionByPatient[p.id]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-green-600 hover:underline"
+                        title="Buka screen tablet Careo untuk pasien ini"
+                      >
+                        <MonitorPlay className="w-4 h-4" /> Tampilkan
+                      </a>
+                    )}
                     <Link href={`/dashboard/hospital/patients/${p.id}`} className="text-blue-600 hover:underline">View</Link>
                     <Link href={`/dashboard/hospital/patients/${p.id}/edit`} className="text-indigo-600 hover:underline">Edit</Link>
                     <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id} className="text-red-500 hover:underline disabled:opacity-50">

@@ -13,7 +13,7 @@ interface Content {
   education_categories?: { name: string };
 }
 
-const TYPES = ["ARTICLE", "VIDEO", "PDF"];
+const TYPES = ["ARTICLE", "VIDEO", "PDF", "INFOGRAPHIC"];
 const EMPTY_FORM = { title: "", content_type: "ARTICLE", body_text: "", media_url: "", category_id: "", is_published: true };
 
 export default function EducationPage() {
@@ -65,7 +65,7 @@ export default function EducationPage() {
     load();
   }
 
-  const TYPE_ICON: Record<string, string> = { ARTICLE: "📄", VIDEO: "🎬", PDF: "📋" };
+  const TYPE_ICON: Record<string, string> = { ARTICLE: "📄", VIDEO: "🎬", PDF: "📋", INFOGRAPHIC: "🖼️" };
 
   return (
     <div className="p-8">

@@ -6,6 +6,10 @@
 -- ==========================================
 -- DROP EXISTING TABLES (Reset Database)
 -- ==========================================
+DROP TABLE IF EXISTS spiritual_contents CASCADE;
+DROP TABLE IF EXISTS recovery_checklist_items CASCADE;
+DROP TABLE IF EXISTS recovery_progress CASCADE;
+DROP TABLE IF EXISTS vital_signs CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 DROP TABLE IF EXISTS patient_activity_logs CASCADE;
 DROP TABLE IF EXISTS entertainment_contents CASCADE;
@@ -34,6 +38,7 @@ CREATE TABLE hospitals (
     code VARCHAR UNIQUE, -- Made nullable for register flow
     name VARCHAR NOT NULL,
     address TEXT,
+    spiritual_support_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by UUID,
@@ -81,6 +86,7 @@ CREATE TABLE patient_admissions (
     admission_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     discharge_date TIMESTAMP WITH TIME ZONE,
     status VARCHAR DEFAULT 'ACTIVE', -- ACTIVE, DISCHARGED, TRANSFERRED, DECEASED
+    primary_diagnosis VARCHAR,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by UUID,
@@ -166,7 +172,7 @@ CREATE TABLE nurse_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
     admission_id UUID NOT NULL REFERENCES patient_admissions(id) ON DELETE CASCADE,
-    request_category VARCHAR NOT NULL, -- PAIN, BATHROOM, IV_DRIP, OTHER
+    request_category VARCHAR NOT NULL CHECK (request_category IN ('CALL_NURSE','PAIN','IV_DRIP','BATHROOM','DRINKING_WATER','EXTRA_BLANKET','OTHER')),
     priority VARCHAR DEFAULT 'MEDIUM', -- HIGH, MEDIUM, LOW
     status VARCHAR DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, RESOLVED
     handled_by_nurse_id UUID REFERENCES nurses(id) ON DELETE SET NULL,
@@ -184,7 +190,7 @@ CREATE TABLE treatment_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
     admission_id UUID NOT NULL REFERENCES patient_admissions(id) ON DELETE CASCADE,
-    category VARCHAR NOT NULL, -- DOCTOR_VISIT, MEDICATION, LAB, PHYSIO
+    category VARCHAR NOT NULL CHECK (category IN ('DOCTOR_VISIT','MEDICATION','LAB','RADIOLOGY','PHYSIO','CONTROL')),
     title VARCHAR NOT NULL,
     description TEXT,
     scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -195,6 +201,57 @@ CREATE TABLE treatment_schedules (
     created_by UUID,
     deleted_at TIMESTAMP WITH TIME ZONE
 );
+
+-- ==========================================
+-- 4b. MEDICAL INFORMATION (VITAL SIGNS)
+-- ==========================================
+CREATE TABLE vital_signs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    admission_id UUID NOT NULL REFERENCES patient_admissions(id) ON DELETE CASCADE,
+    measured_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    blood_pressure_systolic INT,
+    blood_pressure_diastolic INT,
+    heart_rate INT,
+    temperature_celsius NUMERIC(4,1),
+    respiratory_rate INT,
+    oxygen_saturation INT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID
+);
+CREATE INDEX idx_vitals_admission ON vital_signs(admission_id, measured_at DESC);
+
+-- ==========================================
+-- 4c. RECOVERY PROGRESS
+-- ==========================================
+CREATE TABLE recovery_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    admission_id UUID NOT NULL UNIQUE REFERENCES patient_admissions(id) ON DELETE CASCADE,
+    estimated_total_days INT,
+    current_day INT DEFAULT 1,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE recovery_checklist_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    recovery_progress_id UUID NOT NULL REFERENCES recovery_progress(id) ON DELETE CASCADE,
+    title VARCHAR NOT NULL,
+    target_date DATE,
+    is_done BOOLEAN DEFAULT false,
+    done_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+CREATE INDEX idx_recovery_checklist_progress ON recovery_checklist_items(recovery_progress_id);
 
 -- ==========================================
 -- 5. MEAL MANAGEMENT
@@ -217,6 +274,7 @@ CREATE TABLE meal_menus (
     name VARCHAR NOT NULL,
     description TEXT,
     image_url VARCHAR,
+    price NUMERIC(12,2) NOT NULL DEFAULT 0,
     meal_type_tags JSONB, -- e.g. ["BREAKFAST", "LUNCH", "DINNER"]
     is_available BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -259,7 +317,7 @@ CREATE TABLE education_contents (
     hospital_id UUID REFERENCES hospitals(id) ON DELETE CASCADE, -- NULLABLE FOR GLOBAL CONTENT
     category_id UUID REFERENCES education_categories(id) ON DELETE SET NULL,
     title VARCHAR NOT NULL,
-    content_type VARCHAR NOT NULL, -- ARTICLE, VIDEO, PDF
+    content_type VARCHAR NOT NULL CHECK (content_type IN ('ARTICLE','VIDEO','PDF','INFOGRAPHIC')),
     media_url VARCHAR,
     body_text TEXT,
     is_published BOOLEAN DEFAULT false,
@@ -275,10 +333,28 @@ CREATE TABLE education_contents (
 CREATE TABLE entertainment_contents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID REFERENCES hospitals(id) ON DELETE CASCADE, -- NULLABLE FOR GLOBAL CONTENT
-    category VARCHAR NOT NULL, -- MOVIE, PODCAST, GAME_LINK, BANNER
+    category VARCHAR NOT NULL CHECK (category IN ('MOVIE','TV','MUSIC','PODCAST','EBOOK','MAGAZINE','GAME_LINK','RELAXATION_VIDEO','BANNER')),
     title VARCHAR NOT NULL,
     thumbnail_url VARCHAR,
     media_url VARCHAR,
+    display_order INT DEFAULT 0,
+    is_published BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- ==========================================
+-- 7b. SPIRITUAL SUPPORT (OPTIONAL, per-hospital toggle via hospitals.spiritual_support_enabled)
+-- ==========================================
+CREATE TABLE spiritual_contents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID REFERENCES hospitals(id) ON DELETE CASCADE, -- NULLABLE FOR GLOBAL CONTENT
+    category VARCHAR NOT NULL CHECK (category IN ('PRAYER_TIME','MUROTTAL','DAILY_PRAYER','REFLECTION','OTHER')),
+    title VARCHAR NOT NULL,
+    media_url VARCHAR,
+    body_text TEXT,
     display_order INT DEFAULT 0,
     is_published BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

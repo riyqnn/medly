@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
         category_id: body.category_id || null,
         description: body.description || null,
         image_url: body.image_url || null,
+        price: body.price ?? 0,
         meal_type_tags: body.meal_type_tags || [],
         is_available: body.is_available ?? true,
         created_by: user?.id || null

@@ -6,7 +6,8 @@ async function getHospitalId(req: NextRequest, supabase: any) {
   return user?.user_metadata?.hospital_id ?? req.headers.get("x-hospital-id");
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const hospitalId = await getHospitalId(req, supabase);
 
@@ -25,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const { data, error } = await supabase.from("doctor_schedules")
       .update(updates)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("hospital_id", hospitalId)
       .is("deleted_at", null)
       .select()
@@ -38,7 +39,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const hospitalId = await getHospitalId(req, supabase);
 
@@ -49,7 +51,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   // Soft delete
   const { error } = await supabase.from("doctor_schedules")
     .update({ deleted_at: new Date().toISOString(), status: "CANCELLED" })
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("hospital_id", hospitalId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

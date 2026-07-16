@@ -10,6 +10,7 @@ interface Admission {
   admission_date: string;
   discharge_date: string | null;
   room_id: string | null;
+  primary_diagnosis?: string | null;
   rooms?: { room_number: string; ward_name: string };
 }
 
@@ -20,6 +21,15 @@ interface Doctor {
 }
 
 interface Room { id: string; room_number: string; ward_name: string; status: string; }
+
+interface ChecklistItem { id: string; title: string; target_date: string | null; is_done: boolean; }
+interface RecoveryProgress {
+  id: string;
+  estimated_total_days: number | null;
+  current_day: number;
+  notes: string | null;
+  recovery_checklist_items: ChecklistItem[];
+}
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -35,6 +45,16 @@ export default function PatientDetailPage() {
   const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [diagnosis, setDiagnosis] = useState("");
+  const [savingDiagnosis, setSavingDiagnosis] = useState(false);
+
+  const [recovery, setRecovery] = useState<RecoveryProgress | null>(null);
+  const [recoveryLoaded, setRecoveryLoaded] = useState(false);
+  const [estimatedDays, setEstimatedDays] = useState("");
+  const [currentDay, setCurrentDay] = useState("");
+  const [recoveryNotes, setRecoveryNotes] = useState("");
+  const [savingRecovery, setSavingRecovery] = useState(false);
+  const [newChecklistTitle, setNewChecklistTitle] = useState("");
 
   useEffect(() => {
     if (id) loadAll();
@@ -49,13 +69,99 @@ export default function PatientDetailPage() {
       fetch(`/api/rooms`),
     ]);
     if (pRes.ok) setPatient(await pRes.json());
-    if (aRes.ok) setAdmissions(await aRes.json());
+    let loadedAdmissions: Admission[] = [];
+    if (aRes.ok) { loadedAdmissions = await aRes.json(); setAdmissions(loadedAdmissions); }
     if (dRes.ok) setDoctors(await dRes.json());
     if (rRes.ok) setRooms(await rRes.json());
     setLoading(false);
+
+    const active = loadedAdmissions.find(a => a.status === "ACTIVE") as any;
+    if (active) {
+      setDiagnosis(active.primary_diagnosis || "");
+      loadRecovery(active.id);
+    }
+  }
+
+  async function loadRecovery(admissionId: string) {
+    const res = await fetch(`/api/recovery-progress?admission_id=${admissionId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setRecovery(data);
+      if (data) {
+        setEstimatedDays(String(data.estimated_total_days ?? ""));
+        setCurrentDay(String(data.current_day ?? 1));
+        setRecoveryNotes(data.notes || "");
+      }
+    }
+    setRecoveryLoaded(true);
   }
 
   const activeAdmission = admissions.find(a => a.status === "ACTIVE");
+
+  async function handleSaveDiagnosis() {
+    if (!activeAdmission) return;
+    setSavingDiagnosis(true);
+    await fetch(`/api/patient-admissions/${activeAdmission.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ primary_diagnosis: diagnosis }),
+    });
+    setSavingDiagnosis(false);
+  }
+
+  async function handleCreateRecovery() {
+    if (!activeAdmission) return;
+    setSavingRecovery(true);
+    const res = await fetch("/api/recovery-progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        admission_id: activeAdmission.id,
+        estimated_total_days: estimatedDays ? Number(estimatedDays) : null,
+        current_day: currentDay ? Number(currentDay) : 1,
+        notes: recoveryNotes || null,
+      }),
+    });
+    setSavingRecovery(false);
+    if (res.ok) loadRecovery(activeAdmission.id);
+    else { const d = await res.json(); alert(d.error); }
+  }
+
+  async function handleUpdateRecovery() {
+    if (!recovery) return;
+    setSavingRecovery(true);
+    await fetch(`/api/recovery-progress/${recovery.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        estimated_total_days: estimatedDays ? Number(estimatedDays) : null,
+        current_day: currentDay ? Number(currentDay) : 1,
+        notes: recoveryNotes || null,
+      }),
+    });
+    setSavingRecovery(false);
+    if (activeAdmission) loadRecovery(activeAdmission.id);
+  }
+
+  async function handleAddChecklistItem() {
+    if (!recovery || !newChecklistTitle.trim()) return;
+    await fetch("/api/recovery-checklist-items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recovery_progress_id: recovery.id, title: newChecklistTitle.trim() }),
+    });
+    setNewChecklistTitle("");
+    if (activeAdmission) loadRecovery(activeAdmission.id);
+  }
+
+  async function handleToggleChecklistItem(item: ChecklistItem) {
+    await fetch(`/api/recovery-checklist-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_done: !item.is_done }),
+    });
+    if (activeAdmission) loadRecovery(activeAdmission.id);
+  }
 
   async function handleAdmit() {
     setAssigning(true);
@@ -153,6 +259,18 @@ export default function PatientDetailPage() {
                 Move Room
               </button>
             </div>
+            {/* Diagnosis */}
+            <div className="mt-4 flex gap-3 items-center">
+              <input
+                type="text" placeholder="Diagnosa utama..."
+                value={diagnosis} onChange={e => setDiagnosis(e.target.value)}
+                className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+              />
+              <button onClick={handleSaveDiagnosis} disabled={savingDiagnosis}
+                className="px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
+                {savingDiagnosis ? "..." : "Simpan Diagnosa"}
+              </button>
+            </div>
           </div>
         ) : (
           <div>
@@ -187,6 +305,64 @@ export default function PatientDetailPage() {
               Assign
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Recovery Progress */}
+      {activeAdmission && recoveryLoaded && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 mt-6">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Recovery Progress</h2>
+          <div className="flex gap-3 items-end flex-wrap">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Hari ke-</label>
+              <input type="number" min={1} value={currentDay} onChange={e => setCurrentDay(e.target.value)}
+                className="w-24 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Estimasi Total Hari</label>
+              <input type="number" min={1} value={estimatedDays} onChange={e => setEstimatedDays(e.target.value)}
+                className="w-32 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs text-gray-500 mb-1">Catatan</label>
+              <input type="text" value={recoveryNotes} onChange={e => setRecoveryNotes(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
+            </div>
+            <button
+              onClick={recovery ? handleUpdateRecovery : handleCreateRecovery}
+              disabled={savingRecovery}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {savingRecovery ? "..." : recovery ? "Update" : "Mulai Tracking"}
+            </button>
+          </div>
+
+          {recovery && (
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Checklist Aktivitas</h3>
+              <div className="space-y-2 mb-3">
+                {(recovery.recovery_checklist_items || []).map(item => (
+                  <label key={item.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={item.is_done} onChange={() => handleToggleChecklistItem(item)} className="w-4 h-4" />
+                    <span className={item.is_done ? "line-through text-gray-400" : ""}>{item.title}</span>
+                  </label>
+                ))}
+                {(recovery.recovery_checklist_items || []).length === 0 && (
+                  <p className="text-sm text-gray-400">Belum ada target aktivitas.</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="Tambah target aktivitas..."
+                  value={newChecklistTitle} onChange={e => setNewChecklistTitle(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+                />
+                <button onClick={handleAddChecklistItem} className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                  Tambah
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

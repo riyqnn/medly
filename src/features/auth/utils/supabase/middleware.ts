@@ -41,12 +41,16 @@ export async function updateSession(request: NextRequest) {
     pathname === '/unauthorized' ||
     pathname === '/forbidden' ||
     pathname.startsWith('/api/auth/') ||
+    // Patient bedside screen (/patient/[admissionId]) has no personal login — the
+    // tablet is bound to a bed, not a user. Its API namespace stays open here and
+    // does its own admission_id validation server-side (see src/features/patient).
+    pathname.startsWith('/api/patient/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon')
 
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
-    (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/'))
+    (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/patient/'))
 
   // ── No session ──────────────────────────────────────────────
   if (!user) {

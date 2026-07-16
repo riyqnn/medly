@@ -7,6 +7,7 @@ interface Meal {
   id: string;
   name: string;
   description: string | null;
+  price: number;
   meal_type_tags: string[];
   is_available: boolean;
   meal_categories?: { name: string };
@@ -14,7 +15,7 @@ interface Meal {
 interface Category { id: string; name: string; }
 
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "DINNER"];
-const EMPTY_FORM = { name: "", description: "", category_id: "", meal_type_tags: [] as string[], is_available: true };
+const EMPTY_FORM = { name: "", description: "", price: 0, category_id: "", meal_type_tags: [] as string[], is_available: true };
 
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -39,7 +40,7 @@ export default function MealsPage() {
   function openAdd() { setEditTarget(null); setForm(EMPTY_FORM); setError(""); setShowModal(true); }
   function openEdit(m: Meal) {
     setEditTarget(m);
-    setForm({ name: m.name, description: m.description || "", category_id: "", meal_type_tags: m.meal_type_tags || [], is_available: m.is_available });
+    setForm({ name: m.name, description: m.description || "", price: m.price ?? 0, category_id: "", meal_type_tags: m.meal_type_tags || [], is_available: m.is_available });
     setError(""); setShowModal(true);
   }
 
@@ -98,6 +99,7 @@ export default function MealsPage() {
                 <button onClick={() => toggleAvailability(m)} className={`w-3 h-3 rounded-full mt-1 ${m.is_available ? "bg-green-500" : "bg-red-400"}`} title={m.is_available ? "Available (click to disable)" : "Unavailable (click to enable)"} />
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white">{m.name}</h3>
+              <p className="text-sm font-semibold text-blue-600 mt-0.5">Rp {Number(m.price ?? 0).toLocaleString("id-ID")}</p>
               {m.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{m.description}</p>}
               <div className="mt-2 flex gap-1 flex-wrap">
                 {m.meal_type_tags?.map(t => <span key={t} className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 px-1.5 py-0.5 rounded">{t}</span>)}
@@ -127,6 +129,10 @@ export default function MealsPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Description</label>
                 <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Harga (Rp)</label>
+                <input type="number" min={0} step={500} value={form.price} onChange={e => setForm({...form, price: Number(e.target.value)})} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Meal Type Tags</label>
