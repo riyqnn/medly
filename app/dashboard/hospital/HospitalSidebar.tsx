@@ -14,8 +14,7 @@ import {
   GraduationCap,
   Clapperboard,
   Sparkles,
-  IdCard,
-  UserPlus,
+  HeartPulse,
   type LucideIcon,
 } from "lucide-react";
 import { BrandLockup } from "@/src/features/shell/components/Brand";
@@ -28,7 +27,8 @@ const CARE: Item[] = [
   { href: "/dashboard/hospital", label: "Ringkasan", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/hospital/patients", label: "Pasien", icon: Users },
   { href: "/dashboard/hospital/doctors", label: "Dokter", icon: Stethoscope },
-  { href: "/dashboard/hospital/nurses", label: "Permintaan Perawat", icon: BellRing },
+  { href: "/dashboard/hospital/nurses", label: "Perawat", icon: HeartPulse },
+  { href: "/dashboard/hospital/nurse-requests", label: "Permintaan Perawat", icon: BellRing },
   { href: "/dashboard/hospital/treatments", label: "Jadwal Perawatan", icon: CalendarDays },
 ];
 
@@ -38,11 +38,6 @@ const SERVICES: Item[] = [
   { href: "/dashboard/hospital/education", label: "Edukasi", icon: GraduationCap },
   { href: "/dashboard/hospital/entertainment", label: "Hiburan", icon: Clapperboard },
   { href: "/dashboard/hospital/spiritual", label: "Kerohanian", icon: Sparkles },
-];
-
-const SYSTEM: Item[] = [
-  { href: "/dashboard/hospital/staff", label: "Staf", icon: IdCard, exact: true },
-  { href: "/dashboard/hospital/staff/create", label: "Tambah Staf", icon: UserPlus },
 ];
 
 function NavLink({ item, badge }: { item: Item; badge?: number }) {
@@ -137,10 +132,9 @@ export function HospitalSidebar({
         <Group
           title="Perawatan"
           items={CARE}
-          badges={{ "/dashboard/hospital/nurses": openRequests }}
+          badges={{ "/dashboard/hospital/nurse-requests": openRequests }}
         />
         <Group title="Layanan Pasien" items={SERVICES} />
-        <Group title="Sistem" items={SYSTEM} />
       </nav>
 
       <div className="border-t border-line p-3">

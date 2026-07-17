@@ -126,12 +126,14 @@ export default function MealsPage() {
                 style={{ animationDelay: `${i * 45}ms` }}
                 className="card flex animate-fade-up flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
               >
-                <div className="relative grid h-32 place-items-center overflow-hidden bg-brand-50">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-brand-50">
                   {m.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.image_url} alt="" className="h-full w-full object-cover" />
+                    <img src={m.image_url} alt={m.name} className="h-full w-full object-cover" />
                   ) : (
-                    <UtensilsCrossed className="h-8 w-8 text-brand-300" strokeWidth={1.6} />
+                    <div className="flex h-full items-center justify-center">
+                      <UtensilsCrossed className="h-10 w-10 text-brand-300" strokeWidth={1.4} />
+                    </div>
                   )}
                   {m.meal_categories?.name && (
                     <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-ink backdrop-blur">

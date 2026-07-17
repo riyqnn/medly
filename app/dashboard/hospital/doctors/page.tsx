@@ -14,7 +14,7 @@ interface Doctor {
   sip_number: string | null;
 }
 
-const EMPTY_FORM = { employee_code: "", full_name: "", specialization: "", str_number: "", sip_number: "" };
+const EMPTY_FORM = { employee_code: "", full_name: "", specialization: "", str_number: "", sip_number: "", email: "", password: "" };
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -51,6 +51,8 @@ export default function DoctorsPage() {
       specialization: d.specialization ?? "",
       str_number: d.str_number ?? "",
       sip_number: d.sip_number ?? "",
+      email: "",
+      password: "",
     });
     setError("");
     setShowModal(true);
@@ -175,7 +177,7 @@ export default function DoctorsPage() {
       >
         <FormError>{error}</FormError>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Kode pegawai</label>
               <input
@@ -206,7 +208,34 @@ export default function DoctorsPage() {
               placeholder="Penyakit Dalam"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          {!editTarget && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-y border-line py-4">
+              <div>
+                <label className="label">Email Akun</label>
+                <input
+                  required={!editTarget}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="field"
+                  placeholder="dokter@medly.id"
+                />
+              </div>
+              <div>
+                <label className="label">Kata Sandi</label>
+                <input
+                  required={!editTarget}
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="field"
+                  placeholder="Minimal 6 karakter"
+                  minLength={6}
+                />
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Nomor STR</label>
               <input
