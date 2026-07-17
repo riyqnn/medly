@@ -38,6 +38,7 @@ export default function NurseDashboard() {
   const [history, setHistory] = useState<NurseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [nurseId, setNurseId] = useState<string | null>(null);
+  const [linked, setLinked] = useState<boolean | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,22 +49,18 @@ export default function NurseDashboard() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, hospital_id")
-        .eq("id", user.id)
-        .single();
+      // The nurse record is found by the account it belongs to. This used to
+      // guess by matching full_name and silently fell back to whichever nurse
+      // happened to be first in the hospital.
+      const { data: nurse } = await supabase
+        .from("nurses")
+        .select("id")
+        .eq("profile_id", user.id)
+        .is("deleted_at", null)
+        .maybeSingle();
 
-      if (profile) {
-        const { data: nurses } = await supabase
-          .from("nurses")
-          .select("id, full_name")
-          .eq("hospital_id", profile.hospital_id);
-        if (nurses && nurses.length > 0) {
-          const matched = nurses.find((n: any) => n.full_name === profile.full_name) ?? nurses[0];
-          setNurseId(matched.id);
-        }
-      }
+      setNurseId(nurse?.id ?? null);
+      setLinked(!!nurse);
     })();
   }, []);
 
@@ -111,6 +108,13 @@ export default function NurseDashboard() {
       />
 
       <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">
+        {linked === false && (
+          <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            Akun Anda belum terhubung ke data perawat mana pun, jadi permintaan yang Anda tangani
+            tidak tercatat atas nama Anda. Minta admin membuka menu Perawat lalu menautkan akun ini.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <section>
             <div className="mb-4 flex items-center gap-2.5">

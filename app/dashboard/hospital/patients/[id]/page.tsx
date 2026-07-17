@@ -1,54 +1,73 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronLeft,
   MonitorPlay,
-  Pencil,
   Plus,
   Check,
   Activity,
   UserPlus,
   Trash2,
+  TriangleAlert,
+  FileText,
+  Pencil,
 } from "lucide-react";
 import { PageShell, Loading } from "@/src/features/shell/components/Page";
 import { Modal, FormError } from "@/src/features/shell/components/Modal";
-import { ADMISSION_STATUS } from "@/src/features/shell/constants";
+import {
+  ADMISSION_STATUS,
+  MEDICAL_RECORD_TYPES,
+  NURSE_ASSIGNMENT_ROLES,
+  BLOOD_TYPES,
+} from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
 
+interface Patient {
+  id: string;
+  mrn: string;
+  full_name: string;
+  dob: string | null;
+  gender: string | null;
+  contact_number: string | null;
+  emergency_contact: string | null;
+  address: string | null;
+  blood_type: string | null;
+  allergies: string | null;
+}
 interface Admission {
   id: string;
   status: string;
   admission_date: string;
-  discharge_date: string | null;
   room_id: string | null;
-  primary_diagnosis?: string | null;
+  primary_diagnosis: string | null;
+  secondary_diagnosis: string | null;
+  chief_complaint: string | null;
+  care_plan: string | null;
   rooms?: { room_number: string; ward_name: string } | null;
 }
-interface Doctor {
+interface Staff {
   id: string;
   full_name: string;
-  specialization: string | null;
+  specialization?: string | null;
+  employee_code?: string;
 }
 interface Assignment {
   id: string;
   role: string;
-  doctors?: Doctor | null;
+  doctors?: Staff | null;
+  nurses?: Staff | null;
 }
 interface Room {
   id: string;
   room_number: string;
   ward_name: string;
+  capacity: number;
   status: string;
 }
-interface ChecklistItem {
-  id: string;
-  title: string;
-  target_date: string | null;
-  is_done: boolean;
-}
+interface ChecklistItem { id: string; title: string; is_done: boolean }
 interface RecoveryProgress {
   id: string;
   estimated_total_days: number | null;
@@ -65,6 +84,14 @@ interface Vital {
   temperature_celsius: number | null;
   oxygen_saturation: number | null;
 }
+interface Record_ {
+  id: string;
+  record_type: string;
+  title: string;
+  content: string | null;
+  recorded_at: string;
+  author_name: string | null;
+}
 
 const EMPTY_VITALS = {
   blood_pressure_systolic: "",
@@ -74,18 +101,21 @@ const EMPTY_VITALS = {
   respiratory_rate: "",
   oxygen_saturation: "",
 };
+const EMPTY_RECORD = { record_type: "PROGRESS", title: "", content: "" };
 
 function Panel({
   title,
   children,
   action,
+  className,
 }: {
   title: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="card p-6">
+    <section className={cn("card p-6", className)}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="eyebrow">{title}</h2>
         {action}
@@ -95,23 +125,69 @@ function Panel({
   );
 }
 
+/** Save button that confirms in place instead of throwing a dialog. */
+function SaveBar({
+  dirty,
+  saving,
+  saved,
+  onSave,
+  onReset,
+}: {
+  dirty: boolean;
+  saving: boolean;
+  saved: boolean;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  if (!dirty && !saved) return null;
+  return (
+    <div className="mt-4 flex items-center justify-end gap-2 border-t border-line pt-4">
+      {saved && !dirty ? (
+        <span className="flex items-center gap-1.5 text-xs font-bold text-brand-600">
+          <Check className="h-3.5 w-3.5" /> Tersimpan
+        </span>
+      ) : (
+        <>
+          <button onClick={onReset} className="btn-ghost px-3 py-2 text-xs">
+            Batal
+          </button>
+          <button onClick={onSave} disabled={saving} className="btn-primary px-4 py-2 text-xs">
+            {saving ? "Menyimpan…" : "Simpan perubahan"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
 
-  const [patient, setPatient] = useState<any>(null);
+  const [patient, setPatient] = useState<Patient | null>(null);
   const [admissions, setAdmissions] = useState<Admission[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [doctors, setDoctors] = useState<Staff[]>([]);
+  const [nurses, setNurses] = useState<Staff[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [doctorAssign, setDoctorAssign] = useState<Assignment[]>([]);
+  const [nurseAssign, setNurseAssign] = useState<Assignment[]>([]);
   const [recovery, setRecovery] = useState<RecoveryProgress | null>(null);
   const [vitals, setVitals] = useState<Vital[]>([]);
+  const [records, setRecords] = useState<Record_[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [flag, setFlag] = useState<string | null>(null);
+
+  // Editable forms, seeded from the loaded record.
+  const [idForm, setIdForm] = useState<Partial<Patient>>({});
+  const [idBase, setIdBase] = useState<Partial<Patient>>({});
+  const [clinForm, setClinForm] = useState<Partial<Admission>>({});
+  const [clinBase, setClinBase] = useState<Partial<Admission>>({});
 
   const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
-  const [diagnosis, setDiagnosis] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
-  const [savedFlag, setSavedFlag] = useState<string | null>(null);
+  const [selectedNurse, setSelectedNurse] = useState("");
+  const [nurseRole, setNurseRole] = useState("PRIMARY_NURSE");
 
   const [estimatedDays, setEstimatedDays] = useState("");
   const [currentDay, setCurrentDay] = useState("");
@@ -120,23 +196,28 @@ export default function PatientDetailPage() {
 
   const [showVitals, setShowVitals] = useState(false);
   const [vitalsForm, setVitalsForm] = useState(EMPTY_VITALS);
-  const [vitalsError, setVitalsError] = useState("");
+  const [showRecord, setShowRecord] = useState(false);
+  const [recordForm, setRecordForm] = useState(EMPTY_RECORD);
+  const [recordTarget, setRecordTarget] = useState<Record_ | null>(null);
+  const [modalError, setModalError] = useState("");
 
   const activeAdmission = admissions.find((a) => a.status === "ACTIVE");
 
-  const flash = (key: string) => {
-    setSavedFlag(key);
-    setTimeout(() => setSavedFlag(null), 2000);
+  const flash = (k: string) => {
+    setFlag(k);
+    setTimeout(() => setFlag((f) => (f === k ? null : f)), 2200);
   };
 
   const loadExtras = useCallback(async (admissionId: string) => {
-    const [rRes, aRes, vRes] = await Promise.all([
+    const [r, d, n, v, m] = await Promise.all([
       fetch(`/api/recovery-progress?admission_id=${admissionId}`),
       fetch(`/api/patient-doctor-assignments?admission_id=${admissionId}`),
+      fetch(`/api/patient-nurse-assignments?admission_id=${admissionId}`),
       fetch(`/api/vitals?admission_id=${admissionId}`),
+      fetch(`/api/medical-records?admission_id=${admissionId}`),
     ]);
-    if (rRes.ok) {
-      const data = await rRes.json();
+    if (r.ok) {
+      const data = await r.json();
       setRecovery(data);
       if (data) {
         setEstimatedDays(String(data.estimated_total_days ?? ""));
@@ -144,42 +225,96 @@ export default function PatientDetailPage() {
         setRecoveryNotes(data.notes ?? "");
       }
     }
-    if (aRes.ok) setAssignments(await aRes.json());
-    if (vRes.ok) setVitals(await vRes.json());
+    if (d.ok) setDoctorAssign(await d.json());
+    if (n.ok) setNurseAssign(await n.json());
+    if (v.ok) setVitals(await v.json());
+    if (m.ok) setRecords(await m.json());
   }, []);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [pRes, aRes, dRes, rRes] = await Promise.all([
+    const [p, a, d, n, r] = await Promise.all([
       fetch(`/api/patients/${id}`),
       fetch(`/api/patient-admissions?patient_id=${id}`),
       fetch("/api/doctors"),
+      fetch("/api/nurses"),
       fetch("/api/rooms"),
     ]);
-    if (pRes.ok) setPatient(await pRes.json());
-    let list: Admission[] = [];
-    if (aRes.ok) {
-      list = await aRes.json();
-      setAdmissions(list);
+    if (p.ok) {
+      const data = await p.json();
+      setPatient(data);
+      const seed = {
+        full_name: data.full_name ?? "",
+        dob: data.dob ?? "",
+        gender: data.gender ?? "",
+        contact_number: data.contact_number ?? "",
+        emergency_contact: data.emergency_contact ?? "",
+        address: data.address ?? "",
+        blood_type: data.blood_type ?? "",
+        allergies: data.allergies ?? "",
+      };
+      setIdForm(seed);
+      setIdBase(seed);
     }
-    if (dRes.ok) setDoctors(await dRes.json());
-    if (rRes.ok) setRooms(await rRes.json());
+    let list: Admission[] = [];
+    if (a.ok) { list = await a.json(); setAdmissions(list); }
+    if (d.ok) setDoctors(await d.json());
+    if (n.ok) setNurses(await n.json());
+    if (r.ok) setRooms(await r.json());
     setLoading(false);
 
-    const active = list.find((a) => a.status === "ACTIVE");
+    const active = list.find((x) => x.status === "ACTIVE");
     if (active) {
-      setDiagnosis(active.primary_diagnosis ?? "");
+      const seed = {
+        primary_diagnosis: active.primary_diagnosis ?? "",
+        secondary_diagnosis: active.secondary_diagnosis ?? "",
+        chief_complaint: active.chief_complaint ?? "",
+        care_plan: active.care_plan ?? "",
+      };
+      setClinForm(seed);
+      setClinBase(seed);
       loadExtras(active.id);
     } else {
       setRecovery(null);
-      setAssignments([]);
+      setDoctorAssign([]);
+      setNurseAssign([]);
       setVitals([]);
+      setRecords([]);
     }
   }, [id, loadExtras]);
 
-  useEffect(() => {
-    if (id) loadAll();
-  }, [id, loadAll]);
+  useEffect(() => { if (id) loadAll(); }, [id, loadAll]);
+
+  const idDirty = JSON.stringify(idForm) !== JSON.stringify(idBase);
+  const clinDirty = JSON.stringify(clinForm) !== JSON.stringify(clinBase);
+
+  async function saveIdentity() {
+    setBusy("identity");
+    const res = await fetch(`/api/patients/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(idForm),
+    });
+    setBusy(null);
+    if (!res.ok) return alert((await res.json()).error);
+    setIdBase(idForm);
+    flash("identity");
+    router.refresh();
+  }
+
+  async function saveClinical() {
+    if (!activeAdmission) return;
+    setBusy("clinical");
+    const res = await fetch(`/api/patient-admissions/${activeAdmission.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clinForm),
+    });
+    setBusy(null);
+    if (!res.ok) return alert((await res.json()).error);
+    setClinBase(clinForm);
+    flash("clinical");
+  }
 
   async function admit() {
     setBusy("admit");
@@ -204,27 +339,32 @@ export default function PatientDetailPage() {
     });
     setBusy(null);
     if (!res.ok) return alert((await res.json()).error);
-    flash(key);
     loadAll();
   }
 
-  async function assignDoctor() {
-    if (!activeAdmission || !selectedDoctor) return;
-    setBusy("doctor");
-    const res = await fetch("/api/patient-doctor-assignments", {
+  async function assign(kind: "doctor" | "nurse") {
+    if (!activeAdmission) return;
+    const url = kind === "doctor" ? "/api/patient-doctor-assignments" : "/api/patient-nurse-assignments";
+    const body =
+      kind === "doctor"
+        ? { admission_id: activeAdmission.id, doctor_id: selectedDoctor }
+        : { admission_id: activeAdmission.id, nurse_id: selectedNurse, role: nurseRole };
+    setBusy(kind);
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ admission_id: activeAdmission.id, doctor_id: selectedDoctor }),
+      body: JSON.stringify(body),
     });
     setBusy(null);
     if (!res.ok) return alert((await res.json()).error);
-    setSelectedDoctor("");
+    kind === "doctor" ? setSelectedDoctor("") : setSelectedNurse("");
     loadExtras(activeAdmission.id);
   }
 
-  async function unassignDoctor(assignmentId: string) {
+  async function unassign(kind: "doctor" | "nurse", assignmentId: string) {
     if (!activeAdmission) return;
-    await fetch(`/api/patient-doctor-assignments/${assignmentId}`, { method: "DELETE" });
+    const url = kind === "doctor" ? "/api/patient-doctor-assignments" : "/api/patient-nurse-assignments";
+    await fetch(`${url}/${assignmentId}`, { method: "DELETE" });
     loadExtras(activeAdmission.id);
   }
 
@@ -278,20 +418,50 @@ export default function PatientDetailPage() {
     e.preventDefault();
     if (!activeAdmission) return;
     setBusy("vitals");
-    setVitalsError("");
+    setModalError("");
     const res = await fetch("/api/vitals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ admission_id: activeAdmission.id, ...vitalsForm }),
     });
     setBusy(null);
-    if (!res.ok) return setVitalsError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setModalError((await res.json()).error ?? "Gagal menyimpan");
     setShowVitals(false);
     setVitalsForm(EMPTY_VITALS);
     loadExtras(activeAdmission.id);
   }
 
-  if (loading) return <PageShell><Loading label="Memuat pasien…" /></PageShell>;
+  async function saveRecord(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activeAdmission) return;
+    setBusy("record");
+    setModalError("");
+    const res = recordTarget
+      ? await fetch(`/api/medical-records/${recordTarget.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(recordForm),
+        })
+      : await fetch("/api/medical-records", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ admission_id: activeAdmission.id, ...recordForm }),
+        });
+    setBusy(null);
+    if (!res.ok) return setModalError((await res.json()).error ?? "Gagal menyimpan");
+    setShowRecord(false);
+    setRecordTarget(null);
+    setRecordForm(EMPTY_RECORD);
+    loadExtras(activeAdmission.id);
+  }
+
+  async function deleteRecord(recordId: string) {
+    if (!confirm("Hapus catatan ini?") || !activeAdmission) return;
+    await fetch(`/api/medical-records/${recordId}`, { method: "DELETE" });
+    loadExtras(activeAdmission.id);
+  }
+
+  if (loading) return <PageShell><Loading label="Memuat rekam pasien…" /></PageShell>;
   if (!patient)
     return (
       <PageShell>
@@ -301,6 +471,8 @@ export default function PatientDetailPage() {
 
   const latest = vitals[0];
   const st = activeAdmission ? ADMISSION_STATUS[activeAdmission.status] : null;
+  const assignedNurseIds = new Set(nurseAssign.map((a) => a.nurses?.id));
+  const assignedDoctorIds = new Set(doctorAssign.map((a) => a.doctors?.id));
 
   return (
     <PageShell>
@@ -311,7 +483,7 @@ export default function PatientDetailPage() {
         <ChevronLeft className="h-4 w-4" /> Semua pasien
       </Link>
 
-      {/* Identity */}
+      {/* Identity header */}
       <div className="card mb-4 flex flex-wrap items-start justify-between gap-5 p-6">
         <div className="flex items-center gap-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand-50 text-sm font-extrabold text-brand-700">
@@ -321,28 +493,138 @@ export default function PatientDetailPage() {
             <h1 className="text-2xl font-extrabold tracking-tight text-ink">{patient.full_name}</h1>
             <p className="tabular mt-0.5 text-sm text-ink-soft">
               MRN {patient.mrn}
-              {patient.dob ? ` · ${new Date(patient.dob).toLocaleDateString("id-ID")}` : ""}
-              {patient.gender ? ` · ${patient.gender === "male" ? "Laki-laki" : "Perempuan"}` : ""}
+              {patient.blood_type ? ` · Gol. darah ${patient.blood_type}` : ""}
             </p>
-            {st && <span className={cn("chip mt-2", st.chip)}>{st.label}</span>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {st && <span className={cn("chip", st.chip)}>{st.label}</span>}
+              {activeAdmission?.rooms?.room_number && (
+                <span className="chip bg-canvas text-ink-soft">Kamar {activeAdmission.rooms.room_number}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          {activeAdmission && (
-            <a href={`/patient/${activeAdmission.id}`} target="_blank" rel="noopener noreferrer" className="btn-primary">
-              <MonitorPlay className="h-4 w-4" /> Tampilkan layar pasien
-            </a>
-          )}
-          <Link href={`/dashboard/hospital/patients/${id}/edit`} className="btn-ghost">
-            <Pencil className="h-4 w-4" /> Ubah
-          </Link>
-        </div>
+        {activeAdmission && (
+          <a href={`/patient/${activeAdmission.id}`} target="_blank" rel="noopener noreferrer" className="btn-primary">
+            <MonitorPlay className="h-4 w-4" /> Tampilkan layar pasien
+          </a>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Admission */}
-        <Panel title="Status rawat inap">
+      {/* Allergies are the one thing that must never be buried in a form. */}
+      {patient.allergies && (
+        <div className="card mb-4 flex items-start gap-3 border-red-200 bg-red-50 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <div>
+            <p className="text-sm font-extrabold text-red-900">Alergi</p>
+            <p className="text-sm text-red-800">{patient.allergies}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {/* ── Identity, editable in place ── */}
+        <Panel title="Identitas pasien">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Nama lengkap</label>
+                <input
+                  value={idForm.full_name ?? ""}
+                  onChange={(e) => setIdForm({ ...idForm, full_name: e.target.value })}
+                  className="field"
+                />
+              </div>
+              <div>
+                <label className="label">Tanggal lahir</label>
+                <input
+                  type="date"
+                  value={idForm.dob ?? ""}
+                  onChange={(e) => setIdForm({ ...idForm, dob: e.target.value })}
+                  className="field"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Jenis kelamin</label>
+                <select
+                  value={idForm.gender ?? ""}
+                  onChange={(e) => setIdForm({ ...idForm, gender: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Pilih…</option>
+                  <option value="male">Laki-laki</option>
+                  <option value="female">Perempuan</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Golongan darah</label>
+                <select
+                  value={idForm.blood_type ?? ""}
+                  onChange={(e) => setIdForm({ ...idForm, blood_type: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Tidak diketahui</option>
+                  {BLOOD_TYPES.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Nomor kontak</label>
+                <input
+                  value={idForm.contact_number ?? ""}
+                  onChange={(e) => setIdForm({ ...idForm, contact_number: e.target.value })}
+                  className="field"
+                />
+              </div>
+              <div>
+                <label className="label">Kontak darurat</label>
+                <input
+                  value={idForm.emergency_contact ?? ""}
+                  onChange={(e) => setIdForm({ ...idForm, emergency_contact: e.target.value })}
+                  className="field"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Alamat</label>
+              <input
+                value={idForm.address ?? ""}
+                onChange={(e) => setIdForm({ ...idForm, address: e.target.value })}
+                className="field"
+              />
+            </div>
+
+            <div>
+              <label className="label">Alergi</label>
+              <textarea
+                rows={2}
+                value={idForm.allergies ?? ""}
+                onChange={(e) => setIdForm({ ...idForm, allergies: e.target.value })}
+                className="field resize-none"
+                placeholder="mis. Penisilin, seafood — kosongkan bila tidak ada"
+              />
+            </div>
+          </div>
+
+          <SaveBar
+            dirty={idDirty}
+            saving={busy === "identity"}
+            saved={flag === "identity"}
+            onSave={saveIdentity}
+            onReset={() => setIdForm(idBase)}
+          />
+        </Panel>
+
+        {/* ── Admission + room ── */}
+        <Panel title="Rawat inap & kamar">
           {activeAdmission ? (
             <div className="space-y-4">
               <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-canvas p-4 text-sm">
@@ -368,33 +650,9 @@ export default function PatientDetailPage() {
               </dl>
 
               <div>
-                <label className="label">Diagnosa utama</label>
-                <div className="flex gap-2">
-                  <input
-                    value={diagnosis}
-                    onChange={(e) => setDiagnosis(e.target.value)}
-                    className="field"
-                    placeholder="mis. Demam Berdarah Dengue"
-                  />
-                  <button
-                    onClick={() => patchAdmission({ primary_diagnosis: diagnosis }, "diagnosis")}
-                    disabled={busy === "diagnosis"}
-                    className="btn-ghost shrink-0"
-                  >
-                    {savedFlag === "diagnosis" ? <Check className="h-4 w-4 text-brand-600" /> : "Simpan"}
-                  </button>
-                </div>
-                <p className="mt-1.5 text-xs text-ink-mute">Tampil di layar pasien.</p>
-              </div>
-
-              <div>
                 <label className="label">Pindah kamar</label>
                 <div className="flex gap-2">
-                  <select
-                    value={selectedRoom}
-                    onChange={(e) => setSelectedRoom(e.target.value)}
-                    className="field"
-                  >
+                  <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="field">
                     <option value="">Pilih kamar tujuan…</option>
                     {rooms
                       .filter((r) => r.status !== "MAINTENANCE" && r.id !== activeAdmission.room_id)
@@ -412,6 +670,15 @@ export default function PatientDetailPage() {
                     Pindahkan
                   </button>
                 </div>
+                {rooms.length === 0 && (
+                  <p className="mt-1.5 text-xs text-ink-mute">
+                    Belum ada kamar.{" "}
+                    <Link href="/dashboard/hospital/rooms" className="row-link">
+                      Tambah kamar dulu
+                    </Link>
+                    .
+                  </p>
+                )}
               </div>
 
               <div className="border-t border-line pt-4">
@@ -436,7 +703,7 @@ export default function PatientDetailPage() {
           ) : (
             <div>
               <p className="mb-4 text-sm text-ink-soft">
-                Pasien ini belum punya admisi aktif. Layar Medly baru bisa dibuka setelah pasien dirawat.
+                Pasien belum dirawat inap. Layar Medly baru bisa dibuka setelah pasien punya admisi aktif.
               </p>
               <div className="flex gap-2">
                 <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="field">
@@ -457,89 +724,190 @@ export default function PatientDetailPage() {
           )}
         </Panel>
 
-        {/* Care team */}
-        <Panel title="Tim dokter">
+        {/* ── Clinical record of this stay ── */}
+        <Panel title="Rekam medis — data stay ini">
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat.</p>
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
           ) : (
-            <div className="space-y-4">
-              {assignments.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-mute">
-                  Belum ada dokter yang ditugaskan.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {assignments.map((a) => (
-                    <li
-                      key={a.id}
-                      className="group flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
-                    >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-[11px] font-extrabold text-brand-700">
-                        {(a.doctors?.full_name ?? "?").replace(/^dr\.?\s*/i, "").slice(0, 2).toUpperCase()}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-extrabold text-ink">{a.doctors?.full_name}</p>
-                        <p className="truncate text-xs text-ink-mute">
-                          {a.doctors?.specialization ?? "Umum"} ·{" "}
-                          {a.role === "MAIN_DOCTOR" ? "DPJP" : "Konsulen"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => unassignDoctor(a.id)}
-                        title="Lepas penugasan"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Keluhan utama</label>
+                  <textarea
+                    rows={2}
+                    value={clinForm.chief_complaint ?? ""}
+                    onChange={(e) => setClinForm({ ...clinForm, chief_complaint: e.target.value })}
+                    className="field resize-none"
+                    placeholder="Apa yang dirasakan pasien saat masuk"
+                  />
+                </div>
+                <div>
+                  <label className="label">Diagnosa utama</label>
+                  <input
+                    value={clinForm.primary_diagnosis ?? ""}
+                    onChange={(e) => setClinForm({ ...clinForm, primary_diagnosis: e.target.value })}
+                    className="field"
+                    placeholder="mis. Demam Berdarah Dengue"
+                  />
+                  <p className="mt-1.5 text-xs text-ink-mute">Tampil di tablet pasien.</p>
+                </div>
+                <div>
+                  <label className="label">Diagnosa penyerta</label>
+                  <textarea
+                    rows={2}
+                    value={clinForm.secondary_diagnosis ?? ""}
+                    onChange={(e) => setClinForm({ ...clinForm, secondary_diagnosis: e.target.value })}
+                    className="field resize-none"
+                    placeholder="Komorbid atau diagnosa sekunder"
+                  />
+                </div>
+                <div>
+                  <label className="label">Rencana perawatan</label>
+                  <textarea
+                    rows={2}
+                    value={clinForm.care_plan ?? ""}
+                    onChange={(e) => setClinForm({ ...clinForm, care_plan: e.target.value })}
+                    className="field resize-none"
+                  />
+                </div>
+              </div>
+              <SaveBar
+                dirty={clinDirty}
+                saving={busy === "clinical"}
+                saved={flag === "clinical"}
+                onSave={saveClinical}
+                onReset={() => setClinForm(clinBase)}
+              />
+            </>
+          )}
+        </Panel>
 
-              <div className="flex gap-2">
-                <select
-                  value={selectedDoctor}
-                  onChange={(e) => setSelectedDoctor(e.target.value)}
-                  className="field"
-                >
-                  <option value="">Tugaskan dokter…</option>
-                  {doctors
-                    .filter((d) => !assignments.some((a) => a.doctors?.id === d.id))
-                    .map((d) => (
+        {/* ── Care team ── */}
+        <Panel title="Tim perawatan">
+          {!activeAdmission ? (
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <p className="label">Dokter</p>
+                {doctorAssign.length === 0 ? (
+                  <p className="mb-2 rounded-xl border border-dashed border-line px-3 py-4 text-center text-xs text-ink-mute">
+                    Belum ada dokter ditugaskan.
+                  </p>
+                ) : (
+                  <ul className="mb-2 space-y-1.5">
+                    {doctorAssign.map((a) => (
+                      <li key={a.id} className="group flex items-center gap-3 rounded-xl border border-line px-3 py-2">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-50 text-[10px] font-extrabold text-brand-700">
+                          {(a.doctors?.full_name ?? "?").replace(/^dr\.?\s*/i, "").slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-ink">{a.doctors?.full_name}</span>
+                          <span className="block truncate text-xs text-ink-mute">
+                            {a.doctors?.specialization ?? "Umum"} · {a.role === "MAIN_DOCTOR" ? "DPJP" : "Konsulen"}
+                          </span>
+                        </span>
+                        <button
+                          onClick={() => unassign("doctor", a.id)}
+                          className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex gap-2">
+                  <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)} className="field">
+                    <option value="">Tugaskan dokter…</option>
+                    {doctors.filter((d) => !assignedDoctorIds.has(d.id)).map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.full_name}
-                        {d.specialization ? ` — ${d.specialization}` : ""}
+                        {d.full_name}{d.specialization ? ` — ${d.specialization}` : ""}
                       </option>
                     ))}
-                </select>
-                <button
-                  onClick={assignDoctor}
-                  disabled={!selectedDoctor || busy === "doctor"}
-                  className="btn-ghost shrink-0"
-                >
-                  <UserPlus className="h-4 w-4" /> Tugaskan
-                </button>
+                  </select>
+                  <button onClick={() => assign("doctor")} disabled={!selectedDoctor || busy === "doctor"} className="btn-ghost shrink-0">
+                    <UserPlus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-line pt-4">
+                <p className="label">Perawat</p>
+                {nurseAssign.length === 0 ? (
+                  <p className="mb-2 rounded-xl border border-dashed border-line px-3 py-4 text-center text-xs text-ink-mute">
+                    Belum ada perawat penanggung jawab.
+                  </p>
+                ) : (
+                  <ul className="mb-2 space-y-1.5">
+                    {nurseAssign.map((a) => (
+                      <li key={a.id} className="group flex items-center gap-3 rounded-xl border border-line px-3 py-2">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sky-50 text-[10px] font-extrabold text-sky-700">
+                          {(a.nurses?.full_name ?? "?").replace(/^ns\.?\s*/i, "").slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-ink">{a.nurses?.full_name}</span>
+                          <span className="block truncate text-xs text-ink-mute">
+                            {NURSE_ASSIGNMENT_ROLES[a.role]?.label ?? a.role}
+                          </span>
+                        </span>
+                        <button
+                          onClick={() => unassign("nurse", a.id)}
+                          className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex gap-2">
+                  <select value={selectedNurse} onChange={(e) => setSelectedNurse(e.target.value)} className="field">
+                    <option value="">Tugaskan perawat…</option>
+                    {nurses.filter((n) => !assignedNurseIds.has(n.id)).map((n) => (
+                      <option key={n.id} value={n.id}>{n.full_name}</option>
+                    ))}
+                  </select>
+                  <select value={nurseRole} onChange={(e) => setNurseRole(e.target.value)} className="field w-40 shrink-0">
+                    {Object.entries(NURSE_ASSIGNMENT_ROLES).map(([k, r]) => (
+                      <option key={k} value={k}>{r.label}</option>
+                    ))}
+                  </select>
+                  <button onClick={() => assign("nurse")} disabled={!selectedNurse || busy === "nurse"} className="btn-ghost shrink-0">
+                    <UserPlus className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-ink-mute">
+                  Penugasan ini untuk penanggung jawab. Panggilan pasien tetap masuk ke antrean semua
+                  perawat agar tidak tertahan di satu shift.
+                </p>
+                {nurses.length === 0 && (
+                  <p className="mt-1.5 text-xs text-ink-mute">
+                    Belum ada perawat.{" "}
+                    <Link href="/dashboard/hospital/nurses" className="row-link">Tambah perawat</Link>.
+                  </p>
+                )}
               </div>
             </div>
           )}
         </Panel>
 
-        {/* Vitals */}
+        {/* ── Vitals ── */}
         <Panel
           title="Vital sign"
           action={
             activeAdmission && (
-              <button onClick={() => setShowVitals(true)} className="btn-ghost px-3 py-1.5 text-xs">
+              <button onClick={() => { setModalError(""); setShowVitals(true); }} className="btn-ghost px-3 py-1.5 text-xs">
                 <Plus className="h-3.5 w-3.5" /> Catat
               </button>
             )
           }
         >
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat.</p>
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
           ) : !latest ? (
             <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-mute">
-              Belum ada pengukuran. Yang dicatat di sini tampil di layar pasien.
+              Belum ada pengukuran. Yang dicatat di sini tampil di tablet pasien.
             </p>
           ) : (
             <div>
@@ -563,66 +931,36 @@ export default function PatientDetailPage() {
                 ))}
               </div>
               <p className="tabular mt-3 text-xs text-ink-mute">
-                Terakhir diukur{" "}
-                {new Date(latest.measured_at).toLocaleString("id-ID", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
+                Terakhir {new Date(latest.measured_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
                 {vitals.length > 1 ? ` · ${vitals.length} catatan` : ""}
               </p>
             </div>
           )}
         </Panel>
 
-        {/* Recovery */}
+        {/* ── Recovery ── */}
         <Panel title="Progres pemulihan">
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat.</p>
+            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-[80px_110px_1fr] gap-3">
                 <div>
                   <label className="label">Hari ke-</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={currentDay}
-                    onChange={(e) => setCurrentDay(e.target.value)}
-                    className="field"
-                  />
+                  <input type="number" min={1} value={currentDay} onChange={(e) => setCurrentDay(e.target.value)} className="field" />
                 </div>
                 <div>
                   <label className="label">Estimasi</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={estimatedDays}
-                    onChange={(e) => setEstimatedDays(e.target.value)}
-                    className="field"
-                    placeholder="hari"
-                  />
+                  <input type="number" min={1} value={estimatedDays} onChange={(e) => setEstimatedDays(e.target.value)} className="field" placeholder="hari" />
                 </div>
                 <div>
                   <label className="label">Catatan untuk pasien</label>
-                  <input
-                    value={recoveryNotes}
-                    onChange={(e) => setRecoveryNotes(e.target.value)}
-                    className="field"
-                    placeholder="mis. Kondisi membaik"
-                  />
+                  <input value={recoveryNotes} onChange={(e) => setRecoveryNotes(e.target.value)} className="field" placeholder="mis. Kondisi membaik" />
                 </div>
               </div>
 
               <button onClick={saveRecovery} disabled={busy === "recovery"} className="btn-primary w-full">
-                {savedFlag === "recovery" ? (
-                  <>
-                    <Check className="h-4 w-4" /> Tersimpan
-                  </>
-                ) : recovery ? (
-                  "Perbarui progres"
-                ) : (
-                  "Mulai tracking pemulihan"
-                )}
+                {flag === "recovery" ? (<><Check className="h-4 w-4" /> Tersimpan</>) : recovery ? "Perbarui progres" : "Mulai tracking pemulihan"}
               </button>
 
               {recovery && (
@@ -631,31 +969,11 @@ export default function PatientDetailPage() {
                   <ul className="mb-3 space-y-1.5">
                     {(recovery.recovery_checklist_items ?? []).map((item) => (
                       <li key={item.id}>
-                        <button
-                          onClick={() => toggleTask(item)}
-                          className="group flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-canvas"
-                        >
-                          <span
-                            className={cn(
-                              "grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 transition",
-                              item.is_done
-                                ? "border-brand-500 bg-brand-500 text-white"
-                                : "border-line group-hover:border-brand-300"
-                            )}
-                          >
-                            <Check
-                              className={cn("h-3 w-3 transition-transform", item.is_done ? "scale-100" : "scale-0")}
-                              strokeWidth={3.5}
-                            />
+                        <button onClick={() => toggleTask(item)} className="group flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-canvas">
+                          <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 transition", item.is_done ? "border-brand-500 bg-brand-500 text-white" : "border-line group-hover:border-brand-300")}>
+                            <Check className={cn("h-3 w-3 transition-transform", item.is_done ? "scale-100" : "scale-0")} strokeWidth={3.5} />
                           </span>
-                          <span
-                            className={cn(
-                              "text-sm font-semibold",
-                              item.is_done ? "text-ink-mute line-through" : "text-ink"
-                            )}
-                          >
-                            {item.title}
-                          </span>
+                          <span className={cn("text-sm font-semibold", item.is_done ? "text-ink-mute line-through" : "text-ink")}>{item.title}</span>
                         </button>
                       </li>
                     ))}
@@ -667,7 +985,7 @@ export default function PatientDetailPage() {
                     <input
                       value={newTask}
                       onChange={(e) => setNewTask(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addTask()}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTask())}
                       className="field"
                       placeholder="Tambah target aktivitas…"
                     />
@@ -682,79 +1000,167 @@ export default function PatientDetailPage() {
         </Panel>
       </div>
 
-      {/* Record vitals */}
+      {/* ── Clinical notes timeline ── */}
+      <Panel
+        title="Catatan klinis"
+        className="mt-4"
+        action={
+          activeAdmission && (
+            <button
+              onClick={() => { setRecordTarget(null); setRecordForm(EMPTY_RECORD); setModalError(""); setShowRecord(true); }}
+              className="btn-ghost px-3 py-1.5 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" /> Tambah catatan
+            </button>
+          )
+        }
+      >
+        {!activeAdmission ? (
+          <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+        ) : records.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink-mute">
+            Belum ada catatan klinis untuk masa rawat ini.
+          </p>
+        ) : (
+          <ol className="relative space-y-4 border-l border-line pl-5">
+            {records.map((r) => {
+              const t = MEDICAL_RECORD_TYPES[r.record_type] ?? MEDICAL_RECORD_TYPES.OTHER;
+              return (
+                <li key={r.id} className="group relative">
+                  <span className={cn("absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white", t.tone.strong)} />
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn("chip", t.tone.soft)}>{t.label}</span>
+                        <span className="tabular text-xs font-semibold text-ink-mute">
+                          {new Date(r.recorded_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                        </span>
+                        {r.author_name && <span className="text-xs text-ink-mute">· {r.author_name}</span>}
+                      </div>
+                      <p className="mt-1 text-[15px] font-extrabold text-ink">{r.title}</p>
+                      {r.content && <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{r.content}</p>}
+                    </div>
+                    <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                      <button
+                        onClick={() => {
+                          setRecordTarget(r);
+                          setRecordForm({ record_type: r.record_type, title: r.title, content: r.content ?? "" });
+                          setModalError("");
+                          setShowRecord(true);
+                        }}
+                        className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteRecord(r.id)}
+                        className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </Panel>
+
+      {/* ── Modals ── */}
       <Modal open={showVitals} onClose={() => setShowVitals(false)} title="Catat vital sign" description="Kosongkan kolom yang tidak diukur.">
-        <FormError>{vitalsError}</FormError>
+        <FormError>{modalError}</FormError>
         <form onSubmit={saveVitals} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Sistolik (mmHg)</label>
-              <input
-                type="number"
-                value={vitalsForm.blood_pressure_systolic}
-                onChange={(e) => setVitalsForm({ ...vitalsForm, blood_pressure_systolic: e.target.value })}
-                className="field"
-                placeholder="120"
-              />
-            </div>
-            <div>
-              <label className="label">Diastolik (mmHg)</label>
-              <input
-                type="number"
-                value={vitalsForm.blood_pressure_diastolic}
-                onChange={(e) => setVitalsForm({ ...vitalsForm, blood_pressure_diastolic: e.target.value })}
-                className="field"
-                placeholder="80"
-              />
-            </div>
-            <div>
-              <label className="label">Nadi (bpm)</label>
-              <input
-                type="number"
-                value={vitalsForm.heart_rate}
-                onChange={(e) => setVitalsForm({ ...vitalsForm, heart_rate: e.target.value })}
-                className="field"
-                placeholder="80"
-              />
-            </div>
-            <div>
-              <label className="label">Suhu (°C)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={vitalsForm.temperature_celsius}
-                onChange={(e) => setVitalsForm({ ...vitalsForm, temperature_celsius: e.target.value })}
-                className="field"
-                placeholder="36.8"
-              />
-            </div>
-            <div>
-              <label className="label">Napas (/menit)</label>
-              <input
-                type="number"
-                value={vitalsForm.respiratory_rate}
-                onChange={(e) => setVitalsForm({ ...vitalsForm, respiratory_rate: e.target.value })}
-                className="field"
-                placeholder="18"
-              />
-            </div>
-            <div>
-              <label className="label">SpO₂ (%)</label>
-              <input
-                type="number"
-                value={vitalsForm.oxygen_saturation}
-                onChange={(e) => setVitalsForm({ ...vitalsForm, oxygen_saturation: e.target.value })}
-                className="field"
-                placeholder="98"
-              />
-            </div>
+            {[
+              { k: "blood_pressure_systolic", l: "Sistolik (mmHg)", p: "120" },
+              { k: "blood_pressure_diastolic", l: "Diastolik (mmHg)", p: "80" },
+              { k: "heart_rate", l: "Nadi (bpm)", p: "80" },
+              { k: "temperature_celsius", l: "Suhu (°C)", p: "36.8", step: "0.1" },
+              { k: "respiratory_rate", l: "Napas (/menit)", p: "18" },
+              { k: "oxygen_saturation", l: "SpO₂ (%)", p: "98" },
+            ].map((f) => (
+              <div key={f.k}>
+                <label className="label">{f.l}</label>
+                <input
+                  type="number"
+                  step={f.step}
+                  value={(vitalsForm as any)[f.k]}
+                  onChange={(e) => setVitalsForm({ ...vitalsForm, [f.k]: e.target.value })}
+                  className="field"
+                  placeholder={f.p}
+                />
+              </div>
+            ))}
           </div>
           <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={() => setShowVitals(false)} className="btn-ghost">
-              Batal
-            </button>
+            <button type="button" onClick={() => setShowVitals(false)} className="btn-ghost">Batal</button>
             <button type="submit" disabled={busy === "vitals"} className="btn-primary">
               <Activity className="h-4 w-4" /> {busy === "vitals" ? "Menyimpan…" : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={showRecord}
+        onClose={() => setShowRecord(false)}
+        title={recordTarget ? "Ubah catatan klinis" : "Tambah catatan klinis"}
+        width="max-w-lg"
+      >
+        <FormError>{modalError}</FormError>
+        <form onSubmit={saveRecord} className="space-y-4">
+          <div>
+            <span className="label">Jenis catatan</span>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(MEDICAL_RECORD_TYPES).map(([k, t]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setRecordForm({ ...recordForm, record_type: k })}
+                  aria-pressed={recordForm.record_type === k}
+                  className={cn(
+                    "rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97]",
+                    recordForm.record_type === k
+                      ? "border-brand-500 bg-brand-500 text-white"
+                      : "border-line bg-white text-ink-soft hover:border-brand-200 hover:bg-brand-50"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="label">Judul</label>
+            <input
+              required
+              value={recordForm.title}
+              onChange={(e) => setRecordForm({ ...recordForm, title: e.target.value })}
+              className="field"
+              placeholder="mis. Visit pagi — kondisi membaik"
+            />
+          </div>
+          <div>
+            <label className="label">Isi catatan</label>
+            <textarea
+              rows={6}
+              value={recordForm.content}
+              onChange={(e) => setRecordForm({ ...recordForm, content: e.target.value })}
+              className="field resize-none"
+              placeholder="Temuan, tindakan, dan rencana berikutnya…"
+            />
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-canvas px-3 py-2.5">
+            <FileText className="h-4 w-4 shrink-0 text-ink-mute" />
+            <p className="text-xs text-ink-mute">
+              Catatan ini internal rumah sakit — tidak ditampilkan di tablet pasien.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={() => setShowRecord(false)} className="btn-ghost">Batal</button>
+            <button type="submit" disabled={busy === "record"} className="btn-primary">
+              {busy === "record" ? "Menyimpan…" : "Simpan catatan"}
             </button>
           </div>
         </form>

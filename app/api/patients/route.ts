@@ -72,6 +72,9 @@ export async function POST(req: NextRequest) {
         gender: body.gender || null,
         contact_number: body.contact_number || null,
         emergency_contact: body.emergency_contact || null,
+        address: body.address || null,
+        blood_type: body.blood_type || null,
+        allergies: body.allergies || null,
         created_by: user?.id || null
       })
       .select()

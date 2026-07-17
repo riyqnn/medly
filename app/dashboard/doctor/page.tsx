@@ -32,6 +32,7 @@ const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 export default function DoctorDashboard() {
   const [doctorId, setDoctorId] = useState<string | null>(null);
+  const [linked, setLinked] = useState<boolean | null>(null);
   const [patients, setPatients] = useState<PatientAssignment[]>([]);
   const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,24 +45,17 @@ export default function DoctorDashboard() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, hospital_id")
-        .eq("id", user.id)
-        .single();
+      // Resolved by the account this record belongs to, not by name matching.
+      const { data: doctor } = await supabase
+        .from("doctors")
+        .select("id")
+        .eq("profile_id", user.id)
+        .is("deleted_at", null)
+        .maybeSingle();
 
-      if (profile) {
-        const { data: doctors } = await supabase
-          .from("doctors")
-          .select("id, full_name")
-          .eq("hospital_id", profile.hospital_id);
-        if (doctors && doctors.length > 0) {
-          const matched = doctors.find((d: any) => d.full_name === profile.full_name) ?? doctors[0];
-          setDoctorId(matched.id);
-        } else {
-          setLoading(false);
-        }
-      }
+      setDoctorId(doctor?.id ?? null);
+      setLinked(!!doctor);
+      if (!doctor) setLoading(false);
     })();
   }, []);
 
@@ -91,6 +85,13 @@ export default function DoctorDashboard() {
       />
 
       <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">
+        {linked === false && (
+          <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            Akun Anda belum terhubung ke data dokter mana pun, jadi pasien dan jadwal Anda belum bisa
+            ditampilkan. Minta admin membuka menu Dokter lalu menautkan akun ini.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section>
             <h2 className="eyebrow mb-4">Pasien rawat inap saya</h2>

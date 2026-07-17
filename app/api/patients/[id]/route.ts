@@ -53,8 +53,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       gender: body.gender,
       contact_number: body.contact_number,
       emergency_contact: body.emergency_contact,
+      address: body.address,
+      blood_type: body.blood_type,
+      allergies: body.allergies,
       updated_at: new Date().toISOString()
     };
+
+    // Empty strings from cleared form fields must land as NULL, not "".
+    (["dob", "gender", "blood_type", "address", "allergies", "contact_number", "emergency_contact"] as const)
+      .forEach((k) => { if ((allowedUpdates as any)[k] === "") (allowedUpdates as any)[k] = null; });
 
     // Remove undefined values
     Object.keys(allowedUpdates).forEach(key => 

@@ -48,9 +48,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
-    if (body.primary_diagnosis !== undefined) {
-      updateData.primary_diagnosis = body.primary_diagnosis;
-    }
+    // Clinical context of the stay; blanks clear the field rather than storing "".
+    (["primary_diagnosis", "secondary_diagnosis", "chief_complaint", "care_plan"] as const).forEach((k) => {
+      if (body[k] !== undefined) updateData[k] = body[k] === "" ? null : body[k];
+    });
 
     if (body.status !== undefined) {
       updateData.status = body.status;

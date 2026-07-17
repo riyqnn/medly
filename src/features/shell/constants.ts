@@ -91,6 +91,22 @@ export const ADMISSION_STATUS: Record<string, { label: string; chip: string }> =
   DECEASED: { label: "Meninggal", chip: "bg-canvas text-ink-mute" },
 };
 
+export const MEDICAL_RECORD_TYPES: Record<string, { label: string; tone: Tone }> = {
+  ANAMNESIS: { label: "Anamnesis", tone: { soft: "bg-sky-50 text-sky-800", strong: "bg-sky-500" } },
+  EXAMINATION: { label: "Pemeriksaan", tone: { soft: "bg-violet-50 text-violet-800", strong: "bg-violet-500" } },
+  DIAGNOSIS: { label: "Diagnosa", tone: { soft: "bg-brand-50 text-brand-800", strong: "bg-brand-500" } },
+  PROGRESS: { label: "Perkembangan", tone: { soft: "bg-teal-50 text-teal-800", strong: "bg-teal-500" } },
+  ACTION: { label: "Tindakan", tone: { soft: "bg-amber-50 text-amber-800", strong: "bg-amber-500" } },
+  OTHER: { label: "Lainnya", tone: { soft: "bg-canvas text-ink-soft", strong: "bg-ink-mute" } },
+};
+
+export const NURSE_ASSIGNMENT_ROLES: Record<string, { label: string }> = {
+  PRIMARY_NURSE: { label: "Perawat penanggung jawab" },
+  ASSOCIATE_NURSE: { label: "Perawat pendamping" },
+};
+
+export const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
 export const EDUCATION_TYPES: Record<string, { label: string }> = {
   ARTICLE: { label: "Artikel" },
   VIDEO: { label: "Video" },

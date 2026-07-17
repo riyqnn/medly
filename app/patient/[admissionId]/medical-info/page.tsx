@@ -3,28 +3,24 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Activity, HeartPulse, Thermometer, Wind } from "lucide-react";
-import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { BedsideTitle, Pager } from "../PatientShell";
 import { TREATMENT_CATEGORIES, TREATMENT_STATUS } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
 
 interface Session {
-  patient: { full_name: string } | null;
-  room: { room_number: string; ward_name: string | null } | null;
   primary_diagnosis: string | null;
   day_of_stay: number;
+  room: { room_number: string } | null;
   doctors: { role: string; full_name: string; specialization: string | null }[];
 }
 interface Schedule {
   id: string;
   category: string;
   title: string;
-  description: string | null;
   scheduled_time: string;
   status: string;
-  doctors?: { full_name: string } | null;
 }
 interface Vital {
-  id: string;
   measured_at: string;
   blood_pressure_systolic: number | null;
   blood_pressure_diastolic: number | null;
@@ -54,21 +50,16 @@ export default function MedicalInfoPage() {
     })();
   }, [admissionId]);
 
-  if (loading) return <BedsideLoading />;
+  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
 
   const latest = vitals[0];
   const doctor = session?.doctors.find((d) => d.role === "MAIN_DOCTOR") ?? session?.doctors[0];
 
-  const facts = [
-    { label: "Dokter", value: doctor?.full_name ?? "—", sub: doctor?.specialization ?? undefined },
-    { label: "Diagnosa utama", value: session?.primary_diagnosis ?? "—" },
-    {
-      label: "Kamar",
-      value: session?.room?.room_number ?? "—",
-      sub: session?.room?.ward_name ?? undefined,
-    },
-    { label: "Hari rawat", value: `Hari ke-${session?.day_of_stay ?? 1}` },
-  ];
+  // Upcoming first: what's already done is not what the patient is waiting for.
+  const now = Date.now();
+  const upcoming = schedules
+    .filter((s) => s.status !== "CANCELLED" && +new Date(s.scheduled_time) >= now - 3600_000)
+    .sort((a, b) => +new Date(a.scheduled_time) - +new Date(b.scheduled_time));
 
   const readings = latest
     ? [
@@ -82,135 +73,102 @@ export default function MedicalInfoPage() {
           unit: "mmHg",
         },
         { icon: HeartPulse, label: "Nadi", value: latest.heart_rate ?? "—", unit: "bpm" },
-        {
-          icon: Thermometer,
-          label: "Suhu",
-          value: latest.temperature_celsius ?? "—",
-          unit: "°C",
-        },
-        { icon: Wind, label: "Saturasi oksigen", value: latest.oxygen_saturation ?? "—", unit: "%" },
+        { icon: Thermometer, label: "Suhu", value: latest.temperature_celsius ?? "—", unit: "°C" },
+        { icon: Wind, label: "Oksigen", value: latest.oxygen_saturation ?? "—", unit: "%" },
       ]
     : [];
 
-  /* Group the timeline by day so a long stay stays readable. */
-  const grouped = schedules.reduce<Record<string, Schedule[]>>((acc, s) => {
-    const key = new Date(s.scheduled_time).toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-    (acc[key] ||= []).push(s);
-    return acc;
-  }, {});
-
   return (
-    <div className="space-y-4">
-      <BedsideHeader title="Info Medis & Jadwal" description="Ringkasan kondisi dan rencana perawatan Anda." />
+    <>
+      <BedsideTitle>Info Medis</BedsideTitle>
 
-      <BedsideCard title="Informasi medis">
-        <dl className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-          {facts.map((f) => (
-            <div key={f.label}>
-              <dt className="text-xs font-semibold text-ink-mute">{f.label}</dt>
-              <dd className="mt-1 text-[15px] font-extrabold leading-snug text-ink">{f.value}</dd>
-              {f.sub && <p className="text-xs text-ink-mute">{f.sub}</p>}
-            </div>
-          ))}
-        </dl>
-      </BedsideCard>
-
-      <BedsideCard
-        title="Vital sign terakhir"
-        action={
-          latest ? (
-            <span className="tabular text-[11px] font-semibold text-ink-mute">
-              diukur{" "}
-              {new Date(latest.measured_at).toLocaleString("id-ID", {
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          ) : null
-        }
-      >
-        {!latest ? (
-          <BedsideEmpty>Belum ada pengukuran vital sign.</BedsideEmpty>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {readings.map((r) => (
-              <div key={r.label} className="rounded-2xl bg-canvas p-4">
-                <span className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-white text-brand-600 shadow-card">
-                  <r.icon className="h-4 w-4" strokeWidth={2.2} />
-                </span>
-                <p className="tabular text-2xl font-extrabold tracking-tight text-ink">
-                  {r.value}
-                  <span className="ml-1 text-xs font-bold text-ink-mute">{r.unit}</span>
-                </p>
-                <p className="mt-0.5 text-xs font-semibold text-ink-soft">{r.label}</p>
-              </div>
-            ))}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+        {/* Left: the facts */}
+        <div className="flex min-h-0 flex-col gap-4">
+          <div className="grid shrink-0 grid-cols-2 gap-3">
+            <Fact label="Dokter" value={doctor?.full_name ?? "—"} sub={doctor?.specialization ?? undefined} />
+            <Fact label="Diagnosa" value={session?.primary_diagnosis ?? "—"} />
+            <Fact label="Kamar" value={session?.room?.room_number ?? "—"} />
+            <Fact label="Hari rawat" value={`Hari ke-${session?.day_of_stay ?? 1}`} />
           </div>
-        )}
-      </BedsideCard>
 
-      <BedsideCard title="Jadwal perawatan">
-        {schedules.length === 0 ? (
-          <BedsideEmpty>Belum ada jadwal perawatan.</BedsideEmpty>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(grouped).map(([day, items]) => (
-              <div key={day}>
-                <p className="mb-3 text-xs font-extrabold capitalize text-ink-soft">{day}</p>
-                {/* Timeline: the rail is the day, each node is a treatment on it. */}
-                <ol className="relative space-y-3 border-l border-line pl-5">
-                  {items.map((s) => {
-                    const cat = TREATMENT_CATEGORIES[s.category];
-                    const st = TREATMENT_STATUS[s.status];
-                    return (
-                      <li key={s.id} className="relative">
-                        <span
-                          className={cn(
-                            "absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white",
-                            cat?.tone.strong
-                          )}
-                          aria-hidden="true"
-                        />
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="tabular text-xs font-bold text-ink-mute">
-                              {new Date(s.scheduled_time).toLocaleTimeString("id-ID", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {" · "}
-                              {cat?.label ?? s.category}
-                            </p>
-                            <p
-                              className={cn(
-                                "text-[15px] font-extrabold text-ink",
-                                s.status === "CANCELLED" && "text-ink-mute line-through"
-                              )}
-                            >
-                              {s.title}
-                            </p>
-                            {s.description && <p className="mt-0.5 text-sm text-ink-soft">{s.description}</p>}
-                            {s.doctors?.full_name && (
-                              <p className="mt-0.5 text-xs text-ink-mute">{s.doctors.full_name}</p>
-                            )}
-                          </div>
-                          <span className={cn("chip", st?.chip)}>{st?.label ?? s.status}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
+          <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-line bg-white p-5 shadow-card">
+            <p className="mb-3 shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">
+              Vital sign terakhir
+            </p>
+            {!latest ? (
+              <div className="grid flex-1 place-items-center">
+                <p className="text-lg font-bold text-ink-mute">Belum ada pengukuran</p>
               </div>
-            ))}
+            ) : (
+              <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
+                {readings.map((r) => (
+                  <div key={r.label} className="flex min-h-0 flex-col justify-center rounded-2xl bg-canvas p-3">
+                    <r.icon className="mb-1 h-5 w-5 shrink-0 text-brand-600" strokeWidth={2.2} />
+                    <p className="tabular truncate text-2xl font-extrabold tracking-tight text-ink">
+                      {r.value}
+                      <span className="ml-1 text-xs font-bold text-ink-mute">{r.unit}</span>
+                    </p>
+                    <p className="truncate text-xs font-bold text-ink-soft">{r.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </BedsideCard>
+        </div>
+
+        {/* Right: what happens next */}
+        <div className="flex min-h-0 flex-col rounded-3xl border border-line bg-white p-5 shadow-card">
+          <p className="mb-3 shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">
+            Jadwal perawatan
+          </p>
+          <Pager
+            items={upcoming}
+            perPage={4}
+            className="grid-cols-1 grid-rows-4"
+            empty="Tidak ada jadwal mendatang"
+            render={(s) => {
+              const cat = TREATMENT_CATEGORIES[s.category];
+              const st = TREATMENT_STATUS[s.status];
+              return (
+                <div
+                  key={s.id}
+                  className="relative flex min-h-0 items-center gap-4 overflow-hidden rounded-2xl border border-line px-4"
+                >
+                  <span className={cn("absolute inset-y-0 left-0 w-1.5", cat?.tone.strong)} />
+                  <div className="tabular w-16 shrink-0 pl-2 text-xl font-extrabold text-ink">
+                    {new Date(s.scheduled_time).toLocaleTimeString("id-ID", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-lg font-extrabold leading-tight text-ink">{s.title}</p>
+                    <p className="truncate text-sm font-semibold text-ink-mute">
+                      {new Date(s.scheduled_time).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}
+                      {" · "}
+                      {cat?.label}
+                    </p>
+                  </div>
+                  <span className={cn("shrink-0 rounded-full px-3 py-1.5 text-xs font-extrabold", st?.chip)}>
+                    {st?.label}
+                  </span>
+                </div>
+              );
+            }}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Fact({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">{label}</p>
+      <p className="mt-0.5 truncate text-lg font-extrabold leading-tight text-ink">{value}</p>
+      {sub && <p className="truncate text-xs text-ink-mute">{sub}</p>}
     </div>
   );
 }

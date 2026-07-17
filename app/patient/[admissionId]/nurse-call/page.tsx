@@ -13,17 +13,15 @@ import {
   Check,
   type LucideIcon,
 } from "lucide-react";
-import { BedsideHeader, BedsideCard, BedsideEmpty } from "../PatientPage";
-import { NURSE_REQUEST_CATEGORIES, NURSE_REQUEST_STATUS, formatTime } from "@/src/features/shell/constants";
+import { BedsideTitle } from "../PatientShell";
+import { NURSE_REQUEST_CATEGORIES, NURSE_REQUEST_STATUS } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
 
 interface NurseRequest {
   id: string;
   request_category: string;
-  priority: string;
   status: string;
   created_at: string;
-  resolved_at: string | null;
 }
 
 const ICONS: Record<string, LucideIcon> = {
@@ -50,7 +48,6 @@ export default function NurseCallPage() {
 
   useEffect(() => {
     load();
-    // Status moves on the nurse's side, so the patient's view polls for it.
     const t = setInterval(load, 15_000);
     return () => clearInterval(t);
   }, [load]);
@@ -65,32 +62,48 @@ export default function NurseCallPage() {
     });
     setPending(null);
     if (!res.ok) {
-      setError("Permintaan gagal terkirim. Silakan coba lagi.");
+      setError("Permintaan gagal terkirim. Coba tekan sekali lagi.");
       return;
     }
     setSent(category);
-    setTimeout(() => setSent(null), 2600);
+    setTimeout(() => setSent(null), 3000);
     load();
   }
 
   const active = requests.filter((r) => r.status !== "RESOLVED");
-  const history = requests.filter((r) => r.status === "RESOLVED");
 
   return (
-    <div className="space-y-4">
-      <BedsideHeader
-        title="Panggil Perawat"
-        description="Pilih kebutuhan Anda — perawat langsung menerima permintaannya."
-      />
+    <>
+      <BedsideTitle
+        aside={
+          active.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-2">
+              {active.slice(0, 3).map((r) => {
+                const st = NURSE_REQUEST_STATUS[r.status];
+                return (
+                  <span
+                    key={r.id}
+                    className={cn("rounded-full px-4 py-2 text-sm font-extrabold", st?.chip)}
+                  >
+                    {NURSE_REQUEST_CATEGORIES[r.request_category]?.label} · {st?.label}
+                  </span>
+                );
+              })}
+            </div>
+          )
+        }
+      >
+        Butuh bantuan apa?
+      </BedsideTitle>
 
       {error && (
-        <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+        <p className="mb-3 shrink-0 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-lg font-bold text-red-700">
           {error}
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {Object.entries(NURSE_REQUEST_CATEGORIES).map(([key, cat], i) => {
+      <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+        {Object.entries(NURSE_REQUEST_CATEGORIES).map(([key, cat]) => {
           const isSent = sent === key;
           const isPending = pending === key;
           const Icon = isSent ? Check : ICONS[key];
@@ -100,87 +113,35 @@ export default function NurseCallPage() {
               key={key}
               onClick={() => send(key)}
               disabled={isPending || isSent}
-              style={{ animationDelay: `${i * 40}ms` }}
               className={cn(
-                "group card flex animate-fade-up flex-col items-center justify-center gap-3 px-3 py-7 transition duration-200",
-                "hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift active:scale-[0.98]",
-                isSent && "border-brand-300 bg-brand-50"
+                "group flex min-h-0 flex-col items-center justify-center gap-3 rounded-3xl border p-3 text-center transition duration-200 active:scale-[0.98]",
+                isSent
+                  ? "border-brand-500 bg-brand-500 text-white shadow-lift"
+                  : "border-line bg-white text-ink shadow-card hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift"
               )}
             >
               <span
                 className={cn(
-                  "grid h-14 w-14 place-items-center rounded-2xl transition-transform duration-200 group-hover:scale-105",
+                  "grid h-16 w-16 shrink-0 place-items-center rounded-2xl transition-transform duration-200 group-hover:scale-105 sm:h-20 sm:w-20",
                   isSent
-                    ? "bg-brand-500 text-white"
+                    ? "bg-white/20 text-white"
                     : urgent
                       ? "bg-red-50 text-red-500"
                       : "bg-brand-50 text-brand-600"
                 )}
               >
-                <Icon className={cn("h-7 w-7", isPending && "animate-pulse")} strokeWidth={1.9} />
+                <Icon
+                  className={cn("h-8 w-8 sm:h-10 sm:w-10", isPending && "animate-pulse")}
+                  strokeWidth={2}
+                />
               </span>
-              <span className="text-center text-sm font-extrabold leading-tight text-ink">
-                {isSent ? "Terkirim" : cat.label}
+              <span className="text-base font-extrabold leading-tight sm:text-lg">
+                {isSent ? "Perawat diberi tahu" : cat.label}
               </span>
             </button>
           );
         })}
       </div>
-
-      <BedsideCard title="Permintaan aktif">
-        {active.length === 0 ? (
-          <BedsideEmpty>Tidak ada permintaan yang sedang berjalan.</BedsideEmpty>
-        ) : (
-          <ul className="space-y-2.5">
-            {active.map((r) => {
-              const st = NURSE_REQUEST_STATUS[r.status];
-              const Icon = ICONS[r.request_category] ?? HelpCircle;
-              return (
-                <li
-                  key={r.id}
-                  className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
-                >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
-                    <Icon className="h-4 w-4" strokeWidth={2.2} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-extrabold text-ink">
-                      {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
-                    </p>
-                    <p className="tabular text-xs text-ink-mute">dikirim {formatTime(r.created_at)}</p>
-                  </div>
-                  <span className={cn("chip", st?.chip)}>
-                    {r.status === "PENDING" && (
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-halo rounded-full bg-amber-500" />
-                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      </span>
-                    )}
-                    {st?.label ?? r.status}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </BedsideCard>
-
-      {history.length > 0 && (
-        <BedsideCard title="Riwayat">
-          <ul className="divide-y divide-line">
-            {history.slice(0, 6).map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <span className="font-semibold text-ink-soft">
-                  {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
-                </span>
-                <span className="tabular text-xs text-ink-mute">
-                  selesai {r.resolved_at ? formatTime(r.resolved_at) : "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </BedsideCard>
-      )}
-    </div>
+    </>
   );
 }

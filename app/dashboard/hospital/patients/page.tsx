@@ -177,8 +177,8 @@ export default function PatientsPage() {
                             </a>
                           )}
                           <Link
-                            href={`/dashboard/hospital/patients/${p.id}/edit`}
-                            title="Ubah"
+                            href={`/dashboard/hospital/patients/${p.id}`}
+                            title="Buka rekam pasien"
                             className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
                           >
                             <Pencil className="h-3.5 w-3.5" />

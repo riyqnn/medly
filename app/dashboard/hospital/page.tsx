@@ -32,7 +32,7 @@ const TILES: {
     label: "Permintaan terbuka",
     hint: "Belum selesai ditangani",
     icon: BellRing,
-    href: "/dashboard/hospital/nurses",
+    href: "/dashboard/hospital/requests",
   },
   {
     key: "today_schedules",
@@ -155,7 +155,7 @@ export default function HospitalDashboard() {
                 <span className="font-extrabold text-ink">{stats.active_nurse_requests} permintaan</span>{" "}
                 dari pasien belum diselesaikan.
               </p>
-              <Link href="/dashboard/hospital/nurses" className="btn-primary mt-4 w-full">
+              <Link href="/dashboard/hospital/requests" className="btn-primary mt-4 w-full">
                 Tangani sekarang
               </Link>
             </div>

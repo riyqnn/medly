@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { UtensilsCrossed, Check } from "lucide-react";
-import { BedsideHeader, BedsideCard, BedsideEmpty, BedsideLoading } from "../PatientPage";
+import { BedsideTitle, Pager } from "../PatientShell";
 import { MEAL_SCHEDULES, MEAL_ORDER_STATUS, formatRupiah } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
 
@@ -14,14 +14,12 @@ interface Menu {
   price: number;
   image_url: string | null;
   meal_type_tags: string[] | null;
-  meal_categories?: { name: string } | null;
 }
 interface Order {
   id: string;
   meal_schedule: string;
-  order_date: string;
   status: string;
-  meal_menus: { name: string; price: number } | null;
+  meal_menus: { name: string } | null;
 }
 
 const todayStr = () => {
@@ -29,7 +27,6 @@ const todayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-/** Default to the sitting the patient is most likely ordering for right now. */
 function currentSitting() {
   const h = new Date().getHours();
   if (h < 10) return "BREAKFAST";
@@ -44,7 +41,7 @@ export default function MealsPage() {
   const [sitting, setSitting] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [ordering, setOrdering] = useState<string | null>(null);
-  const [justOrdered, setJustOrdered] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [m, o] = await Promise.all([
@@ -75,36 +72,50 @@ export default function MealsPage() {
     });
     setOrdering(null);
     if (res.ok) {
-      setJustOrdered(menuId);
-      setTimeout(() => setJustOrdered(null), 2600);
+      setDone(menuId);
+      setTimeout(() => setDone(null), 3000);
       load();
-    } else {
-      const d = await res.json();
-      alert(d.error ?? "Gagal memesan");
     }
   }
 
-  if (loading || !sitting) return <BedsideLoading />;
+  if (loading || !sitting)
+    return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
 
-  const available = menus.filter(
-    (m) => !m.meal_type_tags?.length || m.meal_type_tags.includes(sitting)
-  );
+  const available = menus.filter((m) => !m.meal_type_tags?.length || m.meal_type_tags.includes(sitting));
+  const active = orders.filter((o) => o.status !== "REJECTED").slice(0, 2);
 
   return (
-    <div className="space-y-4">
-      <BedsideHeader title="Pesan Makanan" description="Menu yang tersedia untuk Anda hari ini." />
+    <>
+      <BedsideTitle
+        aside={
+          active.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-2">
+              {active.map((o) => {
+                const st = MEAL_ORDER_STATUS[o.status];
+                return (
+                  <span key={o.id} className={cn("rounded-full px-4 py-2 text-sm font-extrabold", st?.chip)}>
+                    {o.meal_menus?.name} · {st?.label}
+                  </span>
+                );
+              })}
+            </div>
+          )
+        }
+      >
+        Pesan Makanan
+      </BedsideTitle>
 
-      {/* Sitting switcher */}
-      <div className="inline-flex rounded-full border border-line bg-white p-1 shadow-card">
+      {/* Sitting switcher — three targets, thumb-sized. */}
+      <div className="mb-4 flex shrink-0 gap-2">
         {MEAL_SCHEDULES.map((s) => (
           <button
             key={s.value}
             onClick={() => setSitting(s.value)}
             className={cn(
-              "rounded-full px-5 py-2 text-sm font-bold transition-all duration-200",
+              "rounded-2xl border px-6 py-3 text-lg font-extrabold transition active:scale-[0.97]",
               sitting === s.value
-                ? "bg-brand-500 text-white shadow-sm shadow-brand-500/30"
-                : "text-ink-soft hover:text-brand-700"
+                ? "border-brand-500 bg-brand-500 text-white shadow-lift"
+                : "border-line bg-white text-ink-soft shadow-card hover:border-brand-300 hover:bg-brand-50"
             )}
           >
             {s.label}
@@ -112,94 +123,51 @@ export default function MealsPage() {
         ))}
       </div>
 
-      {available.length === 0 ? (
-        <BedsideCard>
-          <BedsideEmpty>Belum ada menu untuk sesi ini.</BedsideEmpty>
-        </BedsideCard>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {available.map((m, i) => {
-            const done = justOrdered === m.id;
-            return (
-              <article
-                key={m.id}
-                style={{ animationDelay: `${i * 45}ms` }}
-                className="card flex animate-fade-up flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
-              >
-                <div className="relative grid h-32 place-items-center overflow-hidden bg-brand-50">
-                  {m.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.image_url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <UtensilsCrossed className="h-8 w-8 text-brand-300" strokeWidth={1.6} />
-                  )}
-                  {m.meal_categories?.name && (
-                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-ink backdrop-blur">
-                      {m.meal_categories.name}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-1 flex-col p-5">
-                  <h2 className="text-[15px] font-extrabold leading-snug text-ink">{m.name}</h2>
-                  {m.description && (
-                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-soft">{m.description}</p>
-                  )}
-                  <div className="mt-4 flex items-center justify-between gap-3 pt-1">
-                    <span className="tabular text-sm font-extrabold text-ink">
-                      {Number(m.price) > 0 ? formatRupiah(m.price) : "Termasuk perawatan"}
-                    </span>
-                    <button
-                      onClick={() => order(m.id)}
-                      disabled={ordering === m.id || done}
-                      className={cn("btn-primary px-4 py-2 text-xs", done && "bg-brand-600")}
-                    >
-                      {done ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" /> Dipesan
-                        </>
-                      ) : ordering === m.id ? (
-                        "Memesan…"
-                      ) : (
-                        "Pesan"
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-
-      <BedsideCard title="Status pesanan">
-        {orders.length === 0 ? (
-          <BedsideEmpty>Anda belum memesan makanan.</BedsideEmpty>
-        ) : (
-          <ul className="divide-y divide-line">
-            {orders.slice(0, 8).map((o) => {
-              const st = MEAL_ORDER_STATUS[o.status];
-              const sittingLabel =
-                MEAL_SCHEDULES.find((s) => s.value === o.meal_schedule)?.label ?? o.meal_schedule;
-              return (
-                <li key={o.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-extrabold text-ink">{o.meal_menus?.name ?? "—"}</p>
-                    <p className="tabular text-xs text-ink-mute">
-                      {new Date(o.order_date).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                      })}{" "}
-                      · {sittingLabel}
-                    </p>
-                  </div>
-                  <span className={cn("chip", st?.chip)}>{st?.label ?? o.status}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </BedsideCard>
-    </div>
+      <Pager
+        items={available}
+        perPage={6}
+        className="grid-cols-2 grid-rows-3 sm:grid-cols-3 sm:grid-rows-2"
+        empty="Belum ada menu untuk sesi ini"
+        render={(m) => {
+          const isDone = done === m.id;
+          return (
+            <button
+              key={m.id}
+              onClick={() => order(m.id)}
+              disabled={ordering === m.id || isDone}
+              className={cn(
+                "group flex min-h-0 flex-col overflow-hidden rounded-3xl border text-left transition duration-200 active:scale-[0.98]",
+                isDone
+                  ? "border-brand-500 bg-brand-500 shadow-lift"
+                  : "border-line bg-white shadow-card hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift"
+              )}
+            >
+              <div className="grid min-h-0 flex-1 place-items-center overflow-hidden bg-brand-50">
+                {isDone ? (
+                  <Check className="h-12 w-12 text-white" strokeWidth={2.5} />
+                ) : m.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.image_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <UtensilsCrossed className="h-10 w-10 text-brand-300" strokeWidth={1.6} />
+                )}
+              </div>
+              <div className={cn("shrink-0 px-4 py-3", isDone && "text-white")}>
+                <p className={cn("truncate text-lg font-extrabold leading-tight", isDone ? "text-white" : "text-ink")}>
+                  {isDone ? "Pesanan terkirim" : m.name}
+                </p>
+                <p className={cn("tabular text-sm font-bold", isDone ? "text-white/80" : "text-brand-600")}>
+                  {ordering === m.id
+                    ? "Memesan…"
+                    : Number(m.price) > 0
+                      ? formatRupiah(m.price)
+                      : "Termasuk perawatan"}
+                </p>
+              </div>
+            </button>
+          );
+        }}
+      />
+    </>
   );
 }

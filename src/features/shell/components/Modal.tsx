@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 
@@ -19,6 +20,9 @@ export function Modal({
   children: React.ReactNode;
   width?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -30,9 +34,20 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  /**
+   * Rendered into <body> rather than in place.
+   *
+   * `position: fixed` resolves against the viewport only while no ancestor
+   * establishes a containing block — and any ancestor with a transform does.
+   * Our page wrappers animate in with `animate-fade-up`, whose final keyframe
+   * (`transform: none`) computes to `matrix(1,0,0,1,0,0)` and keeps that
+   * containing block alive for good. Anchored there, dialogs centred on the
+   * whole scrollable page instead of the screen and drifted off the top.
+   * Portalling sidesteps the whole class of bug, whatever ancestors do later.
+   */
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
@@ -63,7 +78,8 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

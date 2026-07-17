@@ -9,7 +9,9 @@
 DROP TABLE IF EXISTS spiritual_contents CASCADE;
 DROP TABLE IF EXISTS recovery_checklist_items CASCADE;
 DROP TABLE IF EXISTS recovery_progress CASCADE;
+DROP TABLE IF EXISTS medical_records CASCADE;
 DROP TABLE IF EXISTS vital_signs CASCADE;
+DROP TABLE IF EXISTS patient_nurse_assignments CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 DROP TABLE IF EXISTS patient_activity_logs CASCADE;
 DROP TABLE IF EXISTS entertainment_contents CASCADE;
@@ -46,6 +48,19 @@ CREATE TABLE hospitals (
 );
 
 -- ==========================================
+-- 0b. AUTH PROFILES (login identity + RBAC)
+-- Defined before the staff tables because doctors/nurses point back at it.
+-- ==========================================
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    hospital_id UUID REFERENCES hospitals(id) ON DELETE CASCADE, -- NULL for platform ADMIN
+    role VARCHAR NOT NULL DEFAULT 'HOSPITAL', -- ADMIN, HOSPITAL, DOCTOR, NURSE
+    full_name VARCHAR NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================
 -- 1. PATIENT MANAGEMENT
 -- ==========================================
 CREATE TABLE rooms (
@@ -71,6 +86,10 @@ CREATE TABLE patients (
     gender VARCHAR,
     contact_number VARCHAR,
     emergency_contact VARCHAR,
+    address TEXT,
+    -- Facts a clinician needs before touching the patient.
+    blood_type VARCHAR CHECK (blood_type IN ('A','B','AB','O','A+','A-','B+','B-','AB+','AB-','O+','O-')),
+    allergies TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by UUID,
@@ -86,7 +105,11 @@ CREATE TABLE patient_admissions (
     admission_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     discharge_date TIMESTAMP WITH TIME ZONE,
     status VARCHAR DEFAULT 'ACTIVE', -- ACTIVE, DISCHARGED, TRANSFERRED, DECEASED
+    -- Clinical context of this stay.
     primary_diagnosis VARCHAR,
+    secondary_diagnosis TEXT,
+    chief_complaint TEXT,
+    care_plan TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by UUID,
@@ -99,6 +122,9 @@ CREATE TABLE patient_admissions (
 CREATE TABLE doctors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    -- The login this record belongs to. NULL = a doctor the hospital tracks but
+    -- who does not sign in to Medly. Never match staff to accounts by name.
+    profile_id UUID UNIQUE REFERENCES profiles(id) ON DELETE SET NULL,
     employee_code VARCHAR NOT NULL,
     full_name VARCHAR NOT NULL,
     specialization VARCHAR,
@@ -146,6 +172,7 @@ CREATE TABLE patient_doctor_assignments (
 CREATE TABLE nurses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    profile_id UUID UNIQUE REFERENCES profiles(id) ON DELETE SET NULL,
     employee_code VARCHAR NOT NULL,
     full_name VARCHAR NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -153,6 +180,22 @@ CREATE TABLE nurses (
     created_by UUID,
     deleted_at TIMESTAMP WITH TIME ZONE,
     UNIQUE(hospital_id, employee_code)
+);
+
+-- Who is responsible for this patient. Nurse requests deliberately do NOT route
+-- by this: a call goes to the whole ward queue so it is never trapped behind
+-- one nurse's shift. This is accountability, not dispatch.
+CREATE TABLE patient_nurse_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    admission_id UUID NOT NULL REFERENCES patient_admissions(id) ON DELETE CASCADE,
+    nurse_id UUID NOT NULL REFERENCES nurses(id) ON DELETE CASCADE,
+    role VARCHAR DEFAULT 'PRIMARY_NURSE' CHECK (role IN ('PRIMARY_NURSE','ASSOCIATE_NURSE')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(hospital_id, admission_id, nurse_id)
 );
 
 CREATE TABLE nurse_shifts (
@@ -221,6 +264,30 @@ CREATE TABLE vital_signs (
     created_by UUID
 );
 CREATE INDEX idx_vitals_admission ON vital_signs(admission_id, measured_at DESC);
+
+-- ==========================================
+-- 4b-2. MEDICAL RECORD NOTES
+-- Medly does not replace the hospital's EMR (see MVP scope); this is the
+-- working clinical record the lightweight HIS keeps per admission.
+-- ==========================================
+CREATE TABLE medical_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    admission_id UUID NOT NULL REFERENCES patient_admissions(id) ON DELETE CASCADE,
+    record_type VARCHAR NOT NULL CHECK (record_type IN ('ANAMNESIS','EXAMINATION','DIAGNOSIS','PROGRESS','ACTION','OTHER')),
+    title VARCHAR NOT NULL,
+    content TEXT,
+    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    author_profile_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    -- Kept alongside the FK so a note still says who wrote it after an account
+    -- is removed.
+    author_name VARCHAR,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+CREATE INDEX idx_medrec_admission ON medical_records(admission_id, recorded_at DESC);
 
 -- ==========================================
 -- 4c. RECOVERY PROGRESS
@@ -385,14 +452,11 @@ CREATE INDEX idx_nurse_req_hospital_status ON nurse_requests(hospital_id, status
 CREATE INDEX idx_meal_orders_hospital_status_date ON meal_orders(hospital_id, status, order_date);
 CREATE INDEX idx_treatment_sched_hospital_status ON treatment_schedules(hospital_id, status);
 
+-- profiles is defined in section 0b, before the staff tables that reference it.
+
 -- ==========================================
--- 9. AUTH PROFILES (For Login/RBAC)
+-- 9. STAFF IDENTITY INDEXES
 -- ==========================================
-CREATE TABLE profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    hospital_id UUID REFERENCES hospitals(id) ON DELETE CASCADE,
-    role VARCHAR NOT NULL DEFAULT 'HOSPITAL', -- HOSPITAL, DOCTOR, NURSE, ADMIN
-    full_name VARCHAR NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+CREATE INDEX idx_doctors_profile ON doctors(profile_id);
+CREATE INDEX idx_nurses_profile ON nurses(profile_id);
+CREATE INDEX idx_nurse_assign_admission ON patient_nurse_assignments(admission_id);

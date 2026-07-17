@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
+  BedDouble,
   Stethoscope,
+  HeartPulse,
   BellRing,
   CalendarDays,
   UtensilsCrossed,
@@ -15,7 +17,6 @@ import {
   Clapperboard,
   Sparkles,
   IdCard,
-  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { BrandLockup } from "@/src/features/shell/components/Brand";
@@ -27,9 +28,15 @@ type Item = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 const CARE: Item[] = [
   { href: "/dashboard/hospital", label: "Ringkasan", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/hospital/patients", label: "Pasien", icon: Users },
-  { href: "/dashboard/hospital/doctors", label: "Dokter", icon: Stethoscope },
-  { href: "/dashboard/hospital/nurses", label: "Permintaan Perawat", icon: BellRing },
+  { href: "/dashboard/hospital/rooms", label: "Kamar", icon: BedDouble },
   { href: "/dashboard/hospital/treatments", label: "Jadwal Perawatan", icon: CalendarDays },
+  { href: "/dashboard/hospital/requests", label: "Permintaan Perawat", icon: BellRing },
+];
+
+const TEAM: Item[] = [
+  { href: "/dashboard/hospital/doctors", label: "Dokter", icon: Stethoscope },
+  { href: "/dashboard/hospital/nurses", label: "Perawat", icon: HeartPulse },
+  { href: "/dashboard/hospital/staff", label: "Akun Staf", icon: IdCard },
 ];
 
 const SERVICES: Item[] = [
@@ -38,11 +45,6 @@ const SERVICES: Item[] = [
   { href: "/dashboard/hospital/education", label: "Edukasi", icon: GraduationCap },
   { href: "/dashboard/hospital/entertainment", label: "Hiburan", icon: Clapperboard },
   { href: "/dashboard/hospital/spiritual", label: "Kerohanian", icon: Sparkles },
-];
-
-const SYSTEM: Item[] = [
-  { href: "/dashboard/hospital/staff", label: "Staf", icon: IdCard, exact: true },
-  { href: "/dashboard/hospital/staff/create", label: "Tambah Staf", icon: UserPlus },
 ];
 
 function NavLink({ item, badge }: { item: Item; badge?: number }) {
@@ -137,10 +139,10 @@ export function HospitalSidebar({
         <Group
           title="Perawatan"
           items={CARE}
-          badges={{ "/dashboard/hospital/nurses": openRequests }}
+          badges={{ "/dashboard/hospital/requests": openRequests }}
         />
+        <Group title="Tim" items={TEAM} />
         <Group title="Layanan Pasien" items={SERVICES} />
-        <Group title="Sistem" items={SYSTEM} />
       </nav>
 
       <div className="border-t border-line p-3">
