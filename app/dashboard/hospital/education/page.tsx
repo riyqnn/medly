@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
 import { Modal, FormError } from "@/src/features/shell/components/Modal";
+import { Pagination } from "@/src/features/shell/components/Pagination";
+import type { Paged } from "@/src/features/shell/pagination";
 import { EDUCATION_TYPES } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
 
@@ -45,7 +47,8 @@ const EMPTY_FORM = {
 };
 
 export default function EducationPage() {
-  const [contents, setContents] = useState<Content[]>([]);
+  const [list, setList] = useState<Paged<Content> | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Content | null>(null);
@@ -53,16 +56,18 @@ export default function EducationPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const contents = list?.data ?? [];
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const r = await fetch(`/api/education?page=${page}`);
+    if (r.ok) setList(await r.json());
+    setLoading(false);
+  }, [page]);
+
   useEffect(() => {
     load();
-  }, []);
-
-  async function load() {
-    setLoading(true);
-    const res = await fetch("/api/education");
-    if (res.ok) setContents(await res.json());
-    setLoading(false);
-  }
+  }, [load]);
 
   function openAdd() {
     setEditTarget(null);
@@ -226,6 +231,17 @@ export default function EducationPage() {
               })}
             </tbody>
           </table>
+        )}
+
+        {list && !loading && contents.length > 0 && (
+          <Pagination
+            page={list.page}
+            pages={list.pages}
+            total={list.total}
+            limit={list.limit}
+            onPage={setPage}
+            noun="konten"
+          />
         )}
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -18,6 +18,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Pagination } from "@/src/features/shell/components/Pagination";
+import type { Paged } from "@/src/features/shell/pagination";
 import { Modal, FormError } from "@/src/features/shell/components/Modal";
 import { ENTERTAINMENT_CATEGORIES } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
@@ -56,6 +58,8 @@ const EMPTY_FORM = {
 
 export default function EntertainmentPage() {
   const [contents, setContents] = useState<Content[]>([]);
+  const [meta, setMeta] = useState<Paged<Content> | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Content | null>(null);
@@ -64,17 +68,27 @@ export default function EntertainmentPage() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
 
+  const load = useCallback(async () => {
+    setLoading(true);
+    const qs = new URLSearchParams({ page: String(page) });
+    if (filter) qs.set("category", filter);
+    const res = await fetch(`/api/entertainment?${qs}`);
+    if (res.ok) {
+      const j: Paged<Content> = await res.json();
+      setContents(j.data);
+      setMeta(j);
+    }
+    setLoading(false);
+  }, [page, filter]);
+
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [load]);
 
-  async function load() {
-    setLoading(true);
-    const res = await fetch(filter ? `/api/entertainment?category=${filter}` : "/api/entertainment");
-    if (res.ok) setContents(await res.json());
-    setLoading(false);
-  }
+  // Switching category starts over; page 3 of a smaller filter is a dead end.
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   function openAdd() {
     setEditTarget(null);
@@ -250,6 +264,20 @@ export default function EntertainmentPage() {
               </article>
             );
           })}
+        </div>
+      )}
+
+      {meta && !loading && contents.length > 0 && (
+        <div className="card mt-4">
+          <Pagination
+            page={meta.page}
+            pages={meta.pages}
+            total={meta.total}
+            limit={meta.limit}
+            onPage={setPage}
+            noun="konten"
+            className="border-t-0"
+          />
         </div>
       )}
 

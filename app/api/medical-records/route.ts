@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/features/auth/utils/supabase/server";
+import { readPage, paged } from "@/src/features/shell/pagination";
 import { supabaseAdmin } from "@/src/features/auth/utils/supabase/admin";
 
 const TYPES = ["ANAMNESIS", "EXAMINATION", "DIAGNOSIS", "PROGRESS", "ACTION", "OTHER"];
@@ -17,16 +18,19 @@ export async function GET(req: NextRequest) {
   const admissionId = req.nextUrl.searchParams.get("admission_id");
   if (!admissionId) return NextResponse.json({ error: "Missing admission_id" }, { status: 422 });
 
-  const { data, error } = await supabase
+  const p = readPage(req, 10);
+
+  const { data, error, count } = await supabase
     .from("medical_records")
-    .select("*")
+    .select("id, record_type, title, content, recorded_at, author_name", { count: "exact" })
     .eq("hospital_id", hospitalId)
     .eq("admission_id", admissionId)
     .is("deleted_at", null)
-    .order("recorded_at", { ascending: false });
+    .order("recorded_at", { ascending: false })
+    .range(p.from, p.to);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json(paged(data, count, p));
 }
 
 export async function POST(req: NextRequest) {

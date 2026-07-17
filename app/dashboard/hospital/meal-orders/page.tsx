@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, ClipboardList, X } from "lucide-react";
 import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Pagination } from "@/src/features/shell/components/Pagination";
+import type { Paged } from "@/src/features/shell/pagination";
 import {
   MEAL_SCHEDULES,
   MEAL_ORDER_STATUS,
@@ -33,14 +35,20 @@ const NEXT: Record<string, { status: string; label: string }> = {
 
 export default function MealOrdersPage() {
   const [orders, setOrders] = useState<MealOrder[]>([]);
+  const [meta, setMeta] = useState<Paged<MealOrder> | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
-    const res = await fetch("/api/meal-orders");
-    if (res.ok) setOrders(await res.json());
+    const res = await fetch(`/api/meal-orders?page=${page}`);
+    if (res.ok) {
+      const j: Paged<MealOrder> = await res.json();
+      setOrders(j.data);
+      setMeta(j);
+    }
     setLoading(false);
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     fetchOrders();
@@ -152,6 +160,20 @@ export default function MealOrdersPage() {
                 </article>
               );
             })}
+        </div>
+      )}
+
+      {meta && !loading && orders.length > 0 && (
+        <div className="card mt-4">
+          <Pagination
+            page={meta.page}
+            pages={meta.pages}
+            total={meta.total}
+            limit={meta.limit}
+            onPage={setPage}
+            noun="pesanan"
+            className="border-t-0"
+          />
         </div>
       )}
     </PageShell>

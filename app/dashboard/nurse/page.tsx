@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, BellRing } from "lucide-react";
 import { PortalHeader } from "@/src/features/shell/components/PortalHeader";
+import { useMyHospital } from "@/src/features/shell/useMyHospital";
 import { EmptyState, Loading } from "@/src/features/shell/components/Page";
 import { createClient } from "@/src/features/auth/utils/supabase/client";
 import {
@@ -34,6 +35,7 @@ function waitedFor(iso: string) {
 }
 
 export default function NurseDashboard() {
+  const hospital = useMyHospital();
   const [requests, setRequests] = useState<NurseRequest[]>([]);
   const [history, setHistory] = useState<NurseRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,10 +68,10 @@ export default function NurseDashboard() {
 
   const fetchRequests = useCallback(async () => {
     const res = await fetch("/api/nurse-requests");
-    if (res.ok) setRequests(await res.json());
+    if (res.ok) setRequests((await res.json()).data);
     if (nurseId) {
       const h = await fetch(`/api/nurse-requests?nurse_id=${nurseId}&status=RESOLVED`);
-      if (h.ok) setHistory(await h.json());
+      if (h.ok) setHistory((await h.json()).data);
     }
     setLoading(false);
   }, [nurseId]);
@@ -93,18 +95,18 @@ export default function NurseDashboard() {
     if (res.ok) fetchRequests();
   }
 
-  const ordered = [...requests].sort((a, b) => {
-    const rank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-    const p = (rank[a.priority] ?? 3) - (rank[b.priority] ?? 3);
-    return p !== 0 ? p : +new Date(a.created_at) - +new Date(b.created_at);
-  });
+  // Ordered by the API (priority first, then longest waiting). Re-sorting here
+  // would only reorder the current page and quietly bury a HIGH call sitting on
+  // the next one.
+  const ordered = requests;
 
   return (
     <div className="min-h-screen bg-canvas">
       <PortalHeader
-        role="Portal perawat"
+        role={hospital.name ? `Portal perawat · ${hospital.name}` : "Portal perawat"}
         title="Permintaan Pasien"
         subtitle="Diurutkan dari prioritas tertinggi dan yang paling lama menunggu."
+        logoUrl={hospital.logo_url}
       />
 
       <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">

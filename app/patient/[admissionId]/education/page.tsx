@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { FileText, Video, File, Image as ImageIcon, ExternalLink, type LucideIcon } from "lucide-react";
+import { FileText, Video, File, Image as ImageIcon, type LucideIcon } from "lucide-react";
 import { BedsideTitle, Pager, BedsideReader } from "../PatientShell";
+import { MediaViewer, needsStage } from "@/src/features/patient/media/MediaViewer";
 import { EDUCATION_TYPES } from "@/src/features/shell/constants";
-import { cn } from "@/src/lib/utils";
 
 interface Content {
   id: string;
@@ -71,27 +71,22 @@ export default function EducationPage() {
       />
 
       {open && (
-        <BedsideReader title={open.title} onClose={() => setOpen(null)}>
-          {open.content_type === "VIDEO" && open.media_url && (
-            <video controls autoPlay className="w-full rounded-3xl bg-ink" src={open.media_url} />
-          )}
-          {open.content_type === "INFOGRAPHIC" && open.media_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={open.media_url} alt="" className="w-full rounded-3xl" />
-          )}
-          {open.content_type === "PDF" && open.media_url && (
-            <a
-              href={open.media_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-white px-6 py-4 text-lg font-extrabold text-ink shadow-card"
-            >
-              Buka dokumen <ExternalLink className="h-5 w-5" />
-            </a>
-          )}
-          {open.body_text && (
-            <p className="whitespace-pre-wrap text-xl leading-relaxed text-ink-soft">{open.body_text}</p>
-          )}
+        <BedsideReader
+          title={open.title}
+          onClose={() => setOpen(null)}
+          variant={needsStage(open.content_type, open.media_url) ? "stage" : "prose"}
+        >
+          <MediaViewer
+            kind="education"
+            admissionId={admissionId}
+            item={{
+              id: open.id,
+              title: open.title,
+              type: open.content_type,
+              media_url: open.media_url,
+              body_text: open.body_text,
+            }}
+          />
         </BedsideReader>
       )}
     </>

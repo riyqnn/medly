@@ -228,7 +228,7 @@ export default function PatientDetailPage() {
     if (d.ok) setDoctorAssign(await d.json());
     if (n.ok) setNurseAssign(await n.json());
     if (v.ok) setVitals(await v.json());
-    if (m.ok) setRecords(await m.json());
+    if (m.ok) setRecords((await m.json()).data);
   }, []);
 
   const loadAll = useCallback(async () => {

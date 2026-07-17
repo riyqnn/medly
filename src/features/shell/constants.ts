@@ -36,6 +36,10 @@ export const TREATMENT_CATEGORIES: Record<string, { label: string; tone: Tone }>
     label: "Fisioterapi",
     tone: { soft: "bg-rose-50 text-rose-800", strong: "bg-rose-500" },
   },
+  PROCEDURE: {
+    label: "Tindakan",
+    tone: { soft: "bg-indigo-50 text-indigo-800", strong: "bg-indigo-500" },
+  },
   CONTROL: {
     label: "Kontrol",
     tone: { soft: "bg-teal-50 text-teal-800", strong: "bg-teal-500" },

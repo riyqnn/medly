@@ -14,7 +14,8 @@ import {
   Play,
   type LucideIcon,
 } from "lucide-react";
-import { BedsideTitle, Pager } from "../PatientShell";
+import { BedsideTitle, Pager, BedsideReader } from "../PatientShell";
+import { MediaViewer, needsStage } from "@/src/features/patient/media/MediaViewer";
 import { ENTERTAINMENT_CATEGORIES } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
 
@@ -42,6 +43,7 @@ export default function EntertainmentPage() {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
+  const [open, setOpen] = useState<Content | null>(null);
 
   useEffect(() => {
     fetch(`/api/patient/entertainment?admission_id=${admissionId}`)
@@ -86,12 +88,10 @@ export default function EntertainmentPage() {
         render={(c) => {
           const Icon = ICONS[c.category] ?? Film;
           return (
-            <a
+            <button
               key={c.id}
-              href={c.media_url ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex min-h-0 flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift active:scale-[0.98]"
+              onClick={() => setOpen(c)}
+              className="group flex min-h-0 flex-col overflow-hidden rounded-3xl border border-line bg-white text-left shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift active:scale-[0.98]"
             >
               <div className="relative grid min-h-0 flex-1 place-items-center overflow-hidden bg-brand-50">
                 {c.thumbnail_url ? (
@@ -112,10 +112,31 @@ export default function EntertainmentPage() {
                   {ENTERTAINMENT_CATEGORIES[c.category]?.label ?? c.category}
                 </p>
               </div>
-            </a>
+            </button>
           );
         }}
       />
+
+      {open && (
+        <BedsideReader
+          title={open.title}
+          onClose={() => setOpen(null)}
+          variant={needsStage(open.category, open.media_url) ? "stage" : "prose"}
+        >
+          <MediaViewer
+            kind="entertainment"
+            admissionId={admissionId}
+            item={{
+              id: open.id,
+              title: open.title,
+              type: open.category,
+              media_url: open.media_url,
+              thumbnail_url: open.thumbnail_url,
+              subtitle: ENTERTAINMENT_CATEGORIES[open.category]?.label ?? open.category,
+            }}
+          />
+        </BedsideReader>
+      )}
     </>
   );
 }

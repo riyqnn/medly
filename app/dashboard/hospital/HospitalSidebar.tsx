@@ -17,9 +17,10 @@ import {
   Clapperboard,
   Sparkles,
   IdCard,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
-import { BrandLockup } from "@/src/features/shell/components/Brand";
+import { HospitalLockup } from "@/src/features/shell/components/Brand";
 import { LogoutButton } from "@/src/features/auth/components/LogoutButton";
 import { cn } from "@/src/lib/utils";
 
@@ -102,11 +103,19 @@ function Group({ title, items, badges }: { title: string; items: Item[]; badges?
   );
 }
 
+const SETTINGS: Item = {
+  href: "/dashboard/hospital/settings",
+  label: "Pengaturan",
+  icon: Settings,
+};
+
 export function HospitalSidebar({
   hospitalName,
+  logoUrl,
   userName,
 }: {
   hospitalName: string;
+  logoUrl?: string | null;
   userName: string;
 }) {
   const [openRequests, setOpenRequests] = useState(0);
@@ -132,7 +141,7 @@ export function HospitalSidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-line bg-white">
       <div className="px-5 py-6">
-        <BrandLockup subtitle={hospitalName} />
+        <HospitalLockup name={hospitalName} logoUrl={logoUrl} subtitle="Dashboard rumah sakit" />
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
@@ -146,6 +155,10 @@ export function HospitalSidebar({
       </nav>
 
       <div className="border-t border-line p-3">
+        {/* Settings sits by the account, not among the daily work. */}
+        <div className="mb-1">
+          <NavLink item={SETTINGS} />
+        </div>
         <div className="mb-1 flex items-center gap-3 rounded-xl px-3 py-2">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-extrabold text-brand-700">
             {userName.slice(0, 2).toUpperCase()}

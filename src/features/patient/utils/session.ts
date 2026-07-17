@@ -42,7 +42,12 @@ export interface BedsideSession {
   day_of_stay: number;
   patient: { id: string; full_name: string; mrn: string; dob: string | null; gender: string | null } | null;
   room: { id: string; room_number: string; ward_name: string | null } | null;
-  hospital: { id: string; name: string; spiritual_support_enabled: boolean } | null;
+  hospital: {
+    id: string;
+    name: string;
+    logo_url: string | null;
+    spiritual_support_enabled: boolean;
+  } | null;
   doctors: { role: string; id: string; full_name: string; specialization: string | null }[];
 }
 
@@ -58,7 +63,7 @@ export async function getBedsideSession(admissionId: string): Promise<BedsideSes
       id, admission_date, status, primary_diagnosis,
       patients ( id, full_name, mrn, dob, gender ),
       rooms ( id, room_number, ward_name ),
-      hospitals ( id, name, spiritual_support_enabled )
+      hospitals ( id, name, logo_url, spiritual_support_enabled )
     `
     )
     .eq("id", ctx.admissionId)

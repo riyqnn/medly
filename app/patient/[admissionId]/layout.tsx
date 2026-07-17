@@ -22,6 +22,7 @@ export default async function PatientLayout({
         room={session.room?.room_number ?? null}
         ward={session.room?.ward_name ?? null}
         hospital={session.hospital?.name ?? null}
+        hospitalLogo={session.hospital?.logo_url ?? null}
         careTeam={session.doctors}
       />
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pb-5 sm:px-7 sm:pb-7">

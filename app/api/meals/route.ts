@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/features/auth/utils/supabase/server";
+import { readPage, paged } from "@/src/features/shell/pagination";
 
 async function getHospitalId(req: NextRequest, supabase: any) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,9 +21,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const availableOnly = searchParams.get("available") === "true";
 
+  const p = readPage(req);
+
+
   let query = supabase
     .from("meal_menus")
-    .select("*, meal_categories(name)")
+    .select("*, meal_categories(name)", { count: "exact" })
     .eq("hospital_id", hospitalId)
     .is("deleted_at", null)
     .order("name", { ascending: true });
@@ -31,13 +35,13 @@ export async function GET(req: NextRequest) {
     query = query.eq("is_available", true);
   }
 
-  const { data: meals, error } = await query;
+  const { data: meals, error, count } = await query.range(p.from, p.to);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(meals);
+  return NextResponse.json(paged(meals, count, p));
 }
 
 export async function POST(req: NextRequest) {

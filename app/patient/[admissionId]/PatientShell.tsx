@@ -17,12 +17,15 @@ export function BedsideTopBar({
   room,
   ward,
   hospital,
+  hospitalLogo,
   careTeam,
 }: {
   admissionId: string;
   room: string | null;
   ward: string | null;
   hospital: string | null;
+  /** The hospital's own logo; falls back to the Medly mark when unset. */
+  hospitalLogo: string | null;
   careTeam: { id: string; full_name: string; specialization: string | null }[];
 }) {
   const router = useRouter();
@@ -42,9 +45,21 @@ export function BedsideTopBar({
   return (
     <header className="flex shrink-0 items-center justify-between gap-4 px-5 py-3 sm:px-7 sm:py-4">
       {isHome ? (
-        <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="" width={96} height={96} priority className="h-10 w-10 object-contain sm:h-12 sm:w-12" />
-          <span className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">MEDLY</span>
+        /* The patient is in a hospital bed, not in a software product — the
+           bed's own hospital is what belongs at the top of the screen. */
+        <div className="flex min-w-0 items-center gap-3">
+          <Image
+            src={hospitalLogo || "/logo.png"}
+            alt=""
+            width={96}
+            height={96}
+            priority
+            unoptimized={!!hospitalLogo}
+            className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12"
+          />
+          <span className="truncate text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
+            {hospital ?? "MEDLY"}
+          </span>
         </div>
       ) : (
         <button
@@ -63,7 +78,8 @@ export function BedsideTopBar({
             {clock && <span className="tabular ml-2 font-bold text-brand-600">{clock}</span>}
           </p>
           <p className="text-xs font-medium text-ink-mute sm:text-sm">
-            {[ward, hospital].filter(Boolean).join(" · ")}
+            {/* On the home screen the hospital name is already the headline. */}
+            {[ward, isHome ? null : hospital].filter(Boolean).join(" · ")}
           </p>
         </div>
         {careTeam.length > 0 && (
@@ -94,10 +110,17 @@ export function BedsideTopBar({
 export function BedsideReader({
   title,
   onClose,
+  variant = "prose",
   children,
 }: {
   title: string;
   onClose: () => void;
+  /**
+   * "prose" is a centred, scrollable text column. "stage" hands the whole area
+   * to the child and never scrolls — what a video player or a paged book
+   * needs, since both size themselves to the screen.
+   */
+  variant?: "prose" | "stage";
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -124,9 +147,13 @@ export function BedsideReader({
           <X className="h-6 w-6 text-brand-600" strokeWidth={2.6} /> Tutup
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-7 sm:px-7">
-        <div className="mx-auto max-w-3xl space-y-4">{children}</div>
-      </div>
+      {variant === "stage" ? (
+        <div className="flex min-h-0 flex-1 flex-col px-5 pb-5 sm:px-7 sm:pb-7">{children}</div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-7 sm:px-7">
+          <div className="mx-auto max-w-3xl space-y-4">{children}</div>
+        </div>
+      )}
     </div>,
     document.body
   );

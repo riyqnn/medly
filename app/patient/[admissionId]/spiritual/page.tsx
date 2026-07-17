@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Clock, Music2, BookOpenText, Sparkles, HelpCircle, ExternalLink, type LucideIcon } from "lucide-react";
+import { Clock, Music2, BookOpenText, Sparkles, HelpCircle, type LucideIcon } from "lucide-react";
 import { BedsideTitle, Pager, BedsideReader } from "../PatientShell";
+import { MediaViewer, needsStage } from "@/src/features/patient/media/MediaViewer";
 import { SPIRITUAL_CATEGORIES } from "@/src/features/shell/constants";
 
 interface Content {
@@ -69,20 +70,23 @@ export default function SpiritualPage() {
       />
 
       {open && (
-        <BedsideReader title={open.title} onClose={() => setOpen(null)}>
-          {open.body_text && (
-            <p className="whitespace-pre-wrap text-xl leading-relaxed text-ink-soft">{open.body_text}</p>
-          )}
-          {open.media_url && (
-            <a
-              href={open.media_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-white px-6 py-4 text-lg font-extrabold text-ink shadow-card"
-            >
-              Buka <ExternalLink className="h-5 w-5" />
-            </a>
-          )}
+        <BedsideReader
+          title={open.title}
+          onClose={() => setOpen(null)}
+          variant={needsStage(open.category, open.media_url) ? "stage" : "prose"}
+        >
+          <MediaViewer
+            kind="spiritual"
+            admissionId={admissionId}
+            item={{
+              id: open.id,
+              title: open.title,
+              type: open.category,
+              media_url: open.media_url,
+              body_text: open.body_text,
+              subtitle: SPIRITUAL_CATEGORIES[open.category]?.label ?? open.category,
+            }}
+          />
         </BedsideReader>
       )}
     </>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BedDouble, CalendarClock } from "lucide-react";
 import { PortalHeader } from "@/src/features/shell/components/PortalHeader";
+import { useMyHospital } from "@/src/features/shell/useMyHospital";
 import { EmptyState, Loading } from "@/src/features/shell/components/Page";
 import { createClient } from "@/src/features/auth/utils/supabase/client";
 import { cn } from "@/src/lib/utils";
@@ -31,6 +32,7 @@ interface DoctorSchedule {
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 export default function DoctorDashboard() {
+  const hospital = useMyHospital();
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [linked, setLinked] = useState<boolean | null>(null);
   const [patients, setPatients] = useState<PatientAssignment[]>([]);
@@ -79,9 +81,10 @@ export default function DoctorDashboard() {
   return (
     <div className="min-h-screen bg-canvas">
       <PortalHeader
-        role="Portal dokter"
+        role={hospital.name ? `Portal dokter · ${hospital.name}` : "Portal dokter"}
         title="Pasien & Jadwal Saya"
         subtitle="Pasien rawat inap yang ditugaskan kepada Anda."
+        logoUrl={hospital.logo_url}
       />
 
       <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">

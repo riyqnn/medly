@@ -7,17 +7,19 @@ import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell
 import { Modal, FormError } from "@/src/features/shell/components/Modal";
 import { cn } from "@/src/lib/utils";
 
+interface Occupant {
+  admission_id: string;
+  patient_id: string;
+  full_name: string;
+}
 interface Room {
   id: string;
   room_number: string;
   ward_name: string | null;
   capacity: number;
   status: string;
-}
-interface Admission {
-  id: string;
-  room_id: string | null;
-  patients?: { id: string; full_name: string } | null;
+  /** Joined by the API, so occupancy can't drift out of sync with the list. */
+  occupants: Occupant[];
 }
 
 const STATUSES: Record<string, { label: string; chip: string }> = {
@@ -30,7 +32,6 @@ const EMPTY = { room_number: "", ward_name: "", capacity: 1, status: "AVAILABLE"
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Room | null>(null);
@@ -40,20 +41,14 @@ export default function RoomsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [rRes, aRes] = await Promise.all([
-      fetch("/api/rooms"),
-      fetch("/api/patient-admissions?status=ACTIVE"),
-    ]);
-    if (rRes.ok) setRooms(await rRes.json());
-    if (aRes.ok) setAdmissions(await aRes.json());
+    const r = await fetch("/api/rooms");
+    if (r.ok) setRooms(await r.json());
     setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  const occupantsOf = (roomId: string) => admissions.filter((a) => a.room_id === roomId);
 
   function openAdd() {
     setEditTarget(null);
@@ -103,7 +98,7 @@ export default function RoomsPage() {
   }
 
   const totalBeds = rooms.reduce((n, r) => n + (r.capacity ?? 1), 0);
-  const occupied = admissions.filter((a) => a.room_id).length;
+  const occupied = rooms.reduce((n, r) => n + r.occupants.length, 0);
 
   return (
     <PageShell>
@@ -142,7 +137,7 @@ export default function RoomsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {rooms.map((r, i) => {
-            const people = occupantsOf(r.id);
+            const people = r.occupants;
             const free = Math.max(0, (r.capacity ?? 1) - people.length);
             const st = STATUSES[r.status] ?? STATUSES.AVAILABLE;
             return (
@@ -202,13 +197,13 @@ export default function RoomsPage() {
 
                 {people.length > 0 && (
                   <ul className="mt-3 space-y-1 border-t border-line pt-3">
-                    {people.map((a) => (
-                      <li key={a.id}>
+                    {people.map((o) => (
+                      <li key={o.admission_id}>
                         <Link
-                          href={`/dashboard/hospital/patients/${a.patients?.id}`}
+                          href={`/dashboard/hospital/patients/${o.patient_id}`}
                           className="truncate text-xs font-bold text-ink transition hover:text-brand-600"
                         >
-                          {a.patients?.full_name}
+                          {o.full_name}
                         </Link>
                       </li>
                     ))}

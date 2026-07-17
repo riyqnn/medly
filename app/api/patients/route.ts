@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/features/auth/utils/supabase/server";
+import { readPage, paged } from "@/src/features/shell/pagination";
 
 // Middleware helper - get hospital_id securely from session or headers
 async function getHospitalId(req: NextRequest, supabase: any) {
@@ -11,7 +12,7 @@ async function getHospitalId(req: NextRequest, supabase: any) {
   return req.headers.get("x-hospital-id");
 }
 
-// GET: List pasien
+// GET: List pasien (paginated)
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const hospitalId = await getHospitalId(req, supabase);
@@ -21,25 +22,42 @@ export async function GET(req: NextRequest) {
   }
 
   const keyword = req.nextUrl.searchParams.get("q") || "";
+  const p = readPage(req);
 
+  // The active admission is joined here rather than having the client pull the
+  // whole admissions table and match ids in the browser — that pattern quietly
+  // produced wrong badges as soon as either list was truncated.
   let query = supabase
     .from("patients")
-    .select("*")
+    .select(
+      `id, mrn, full_name, dob, gender, blood_type, allergies,
+       patient_admissions ( id, status, rooms ( room_number ) )`,
+      { count: "exact" }
+    )
     .eq("hospital_id", hospitalId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    .is("patient_admissions.deleted_at", null)
+    .eq("patient_admissions.status", "ACTIVE")
+    .order("created_at", { ascending: false })
+    .range(p.from, p.to);
 
   if (keyword) {
     query = query.ilike("full_name", `%${keyword}%`);
   }
 
-  const { data: patients, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(patients);
+  // Flatten the embedded array into the one admission that matters.
+  const rows = (data ?? []).map(({ patient_admissions, ...patient }: any) => ({
+    ...patient,
+    active_admission: patient_admissions?.[0] ?? null,
+  }));
+
+  return NextResponse.json(paged(rows, count, p));
 }
 
 // POST: Registrasi pasien baru
@@ -53,7 +71,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    
+
     // Validasi input
     if (!body.full_name || !body.mrn) {
       return NextResponse.json({ error: "Missing full_name or mrn" }, { status: 422 });
@@ -92,4 +110,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
-

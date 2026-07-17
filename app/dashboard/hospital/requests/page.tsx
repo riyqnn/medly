@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BellRing, Check } from "lucide-react";
+import { Check, Eye } from "lucide-react";
 import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Pagination } from "@/src/features/shell/components/Pagination";
+import type { Paged } from "@/src/features/shell/pagination";
 import {
   NURSE_REQUEST_CATEGORIES,
   NURSE_REQUEST_STATUS,
@@ -17,6 +19,7 @@ interface NurseRequest {
   priority: string;
   status: string;
   created_at: string;
+  nurses?: { full_name: string } | null;
   patient_admissions?: {
     patients?: { full_name: string; mrn: string };
     rooms?: { room_number: string; ward_name: string };
@@ -32,16 +35,21 @@ function waitedFor(iso: string) {
   return `${h} jam ${mins % 60} menit`;
 }
 
-export default function NurseRequestsPage() {
-  const [requests, setRequests] = useState<NurseRequest[]>([]);
+/**
+ * The hospital's view of the ward queue is for supervision only — response
+ * times, who is waiting, what is still open. Handling belongs to the nurses,
+ * and the API enforces that: a PATCH from this role comes back 403.
+ */
+export default function NurseRequestsMonitorPage() {
+  const [list, setList] = useState<Paged<NurseRequest> | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null);
 
   const fetchRequests = useCallback(async () => {
-    const res = await fetch("/api/nurse-requests");
-    if (res.ok) setRequests(await res.json());
+    const res = await fetch(`/api/nurse-requests?page=${page}`);
+    if (res.ok) setList(await res.json());
     setLoading(false);
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     fetchRequests();
@@ -49,48 +57,43 @@ export default function NurseRequestsPage() {
     return () => clearInterval(t);
   }, [fetchRequests]);
 
-  async function handleStatusChange(id: string, status: string) {
-    setBusy(id);
-    const res = await fetch("/api/nurse-requests", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
-    setBusy(null);
-    if (res.ok) fetchRequests();
-  }
-
-  // Highest priority first, then longest waiting — the order a ward works in.
-  const ordered = [...requests].sort((a, b) => {
-    const rank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-    const p = (rank[a.priority] ?? 3) - (rank[b.priority] ?? 3);
-    return p !== 0 ? p : +new Date(a.created_at) - +new Date(b.created_at);
-  });
+  const requests = list?.data ?? [];
+  const waiting = requests.filter((r) => r.status === "PENDING").length;
 
   return (
     <PageShell>
       <PageHeader
         eyebrow="Perawatan"
         title="Permintaan Perawat"
-        description="Permintaan yang dikirim pasien dari tablet di sisi tempat tidur."
+        description="Pantau antrean dan waktu tunggu. Penanganan dilakukan perawat dari portalnya."
         action={
-          requests.length > 0 && (
+          list && list.total > 0 ? (
             <span className="chip bg-brand-50 text-brand-700">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-halo rounded-full bg-brand-500" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-500" />
               </span>
-              {requests.length} terbuka · diperbarui otomatis
+              {list.total} terbuka · {waiting} belum diambil
             </span>
-          )
+          ) : null
         }
       />
 
-      {loading ? (
+      {/* Says plainly why there are no buttons, rather than leaving the reader
+          to wonder whether something is broken. */}
+      <div className="card mb-5 flex items-start gap-3 p-4">
+        <Eye className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />
+        <p className="text-sm leading-relaxed text-ink-soft">
+          Tampilan ini hanya untuk memantau. Yang menerima dan menyelesaikan permintaan adalah
+          perawat yang bertugas — status di bawah ikut berubah begitu mereka menanganinya.
+        </p>
+      </div>
+
+      {loading && !list ? (
         <div className="card">
           <Loading label="Memuat permintaan…" />
         </div>
-      ) : ordered.length === 0 ? (
+      ) : requests.length === 0 ? (
         <div className="card">
           <EmptyState
             icon={Check}
@@ -99,64 +102,66 @@ export default function NurseRequestsPage() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {ordered.map((r, i) => {
-            const pr = PRIORITY[r.priority] ?? PRIORITY.LOW;
-            const st = NURSE_REQUEST_STATUS[r.status];
-            return (
-              <article
-                key={r.id}
-                style={{ animationDelay: `${i * 40}ms` }}
-                className={cn(
-                  "card animate-fade-up flex flex-col p-5 transition duration-200 hover:shadow-lift",
-                  r.priority === "HIGH" && "border-red-200"
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className={cn("chip", pr.chip)}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full", pr.dot)} />
-                    {pr.label}
-                  </span>
-                  <span className={cn("chip", st?.chip)}>{st?.label ?? r.status}</span>
-                </div>
-
-                <h2 className="mt-4 text-lg font-extrabold tracking-tight text-ink">
-                  {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
-                </h2>
-
-                <div className="mt-2 space-y-0.5 text-sm">
-                  <p className="font-bold text-ink">
-                    Kamar {r.patient_admissions?.rooms?.room_number ?? "—"}
-                  </p>
-                  <p className="text-ink-soft">{r.patient_admissions?.patients?.full_name ?? "—"}</p>
-                  <p className="tabular text-xs text-ink-mute">
-                    {formatTime(r.created_at)} · menunggu {waitedFor(r.created_at)}
-                  </p>
-                </div>
-
-                <div className="mt-5 flex gap-2 border-t border-line pt-4">
-                  {r.status === "PENDING" ? (
-                    <button
-                      onClick={() => handleStatusChange(r.id, "IN_PROGRESS")}
-                      disabled={busy === r.id}
-                      className="btn-primary w-full"
-                    >
-                      Tangani permintaan
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleStatusChange(r.id, "RESOLVED")}
-                      disabled={busy === r.id}
-                      className="btn-primary w-full"
-                    >
-                      <Check className="h-4 w-4" /> Tandai selesai
-                    </button>
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {requests.map((r, i) => {
+              const pr = PRIORITY[r.priority] ?? PRIORITY.LOW;
+              const st = NURSE_REQUEST_STATUS[r.status];
+              return (
+                <article
+                  key={r.id}
+                  style={{ animationDelay: `${i * 40}ms` }}
+                  className={cn(
+                    "card animate-fade-up flex flex-col p-5",
+                    r.priority === "HIGH" && "border-red-200"
                   )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn("chip", pr.chip)}>
+                      <span className={cn("h-1.5 w-1.5 rounded-full", pr.dot)} />
+                      {pr.label}
+                    </span>
+                    <span className={cn("chip", st?.chip)}>{st?.label ?? r.status}</span>
+                  </div>
+
+                  <h2 className="mt-4 text-lg font-extrabold tracking-tight text-ink">
+                    {NURSE_REQUEST_CATEGORIES[r.request_category]?.label ?? r.request_category}
+                  </h2>
+
+                  <div className="mt-2 space-y-0.5 text-sm">
+                    <p className="font-bold text-ink">
+                      Kamar {r.patient_admissions?.rooms?.room_number ?? "—"}
+                    </p>
+                    <p className="text-ink-soft">{r.patient_admissions?.patients?.full_name ?? "—"}</p>
+                    <p className="tabular text-xs text-ink-mute">
+                      {formatTime(r.created_at)} · menunggu {waitedFor(r.created_at)}
+                    </p>
+                  </div>
+
+                  <p className="mt-4 border-t border-line pt-3 text-xs font-semibold text-ink-mute">
+                    {r.nurses?.full_name
+                      ? `Ditangani ${r.nurses.full_name}`
+                      : "Menunggu diambil perawat"}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+
+          {list && (
+            <div className="card mt-4">
+              <Pagination
+                page={list.page}
+                pages={list.pages}
+                total={list.total}
+                limit={list.limit}
+                onPage={setPage}
+                noun="permintaan"
+                className="border-t-0"
+              />
+            </div>
+          )}
+        </>
       )}
     </PageShell>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/features/auth/utils/supabase/server";
+import { readPage, paged } from "@/src/features/shell/pagination";
 
 async function getHospitalId(req: NextRequest, supabase: any) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,9 +15,11 @@ export async function GET(req: NextRequest) {
   const hospitalId = await getHospitalId(req, supabase);
 
   // Education content supports GLOBAL content where hospital_id is null
+  const p = readPage(req);
+
   let query = supabase
     .from("education_contents")
-    .select("*, education_categories(name)")
+    .select("*, education_categories(name)", { count: "exact" })
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
@@ -27,13 +30,13 @@ export async function GET(req: NextRequest) {
     query = query.is("hospital_id", null);
   }
 
-  const { data: contents, error } = await query;
+  const { data: contents, error, count } = await query.range(p.from, p.to);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(contents);
+  return NextResponse.json(paged(contents, count, p));
 }
 
 export async function POST(req: NextRequest) {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Plus,
   Pencil,
@@ -13,6 +14,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Pagination } from "@/src/features/shell/components/Pagination";
+import type { Paged } from "@/src/features/shell/pagination";
 import { Modal, FormError } from "@/src/features/shell/components/Modal";
 import { SPIRITUAL_CATEGORIES } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
@@ -47,8 +50,9 @@ const EMPTY_FORM = {
 
 export default function SpiritualPage() {
   const [contents, setContents] = useState<Content[]>([]);
+  const [meta, setMeta] = useState<Paged<Content> | null>(null);
+  const [page, setPage] = useState(1);
   const [enabled, setEnabled] = useState(false);
-  const [togglingEnabled, setTogglingEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Content | null>(null);
@@ -56,28 +60,24 @@ export default function SpiritualPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
-    const [cRes, sRes] = await Promise.all([fetch("/api/spiritual"), fetch("/api/hospital-settings")]);
-    if (cRes.ok) setContents(await cRes.json());
+    const [cRes, sRes] = await Promise.all([
+      fetch(`/api/spiritual?page=${page}`),
+      fetch("/api/hospital-settings"),
+    ]);
+    if (cRes.ok) {
+      const j: Paged<Content> = await cRes.json();
+      setContents(j.data);
+      setMeta(j);
+    }
     if (sRes.ok) setEnabled((await sRes.json()).spiritual_support_enabled);
     setLoading(false);
-  }
+  }, [page]);
 
-  async function toggleEnabled() {
-    setTogglingEnabled(true);
-    const res = await fetch("/api/hospital-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ spiritual_support_enabled: !enabled }),
-    });
-    if (res.ok) setEnabled(!enabled);
-    setTogglingEnabled(false);
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
   function openAdd() {
     setEditTarget(null);
@@ -150,35 +150,26 @@ export default function SpiritualPage() {
         }
       />
 
-      {/* The feature is opt-in per hospital, so the switch leads the page. */}
-      <div className="card mb-5 flex flex-wrap items-center justify-between gap-4 p-5">
-        <div>
-          <p className="text-sm font-extrabold text-ink">Tampilkan di tablet pasien</p>
-          <p className="mt-0.5 text-xs text-ink-soft">
-            {enabled
-              ? "Tab Kerohanian terlihat oleh semua pasien rumah sakit ini."
-              : "Tab Kerohanian disembunyikan dari tablet pasien."}
-          </p>
+      {/* The feature is opt-in per hospital. The switch itself lives in
+          Pengaturan so there is only one of it; this states where the content
+          currently stands. */}
+      {!loading && (
+        <div className="card mb-5 flex flex-wrap items-center justify-between gap-4 p-5">
+          <div>
+            <p className="text-sm font-extrabold text-ink">
+              {enabled ? "Tayang di tablet pasien" : "Disembunyikan dari tablet pasien"}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              {enabled
+                ? "Tab Kerohanian terlihat oleh semua pasien rumah sakit ini."
+                : "Konten di bawah tersimpan, tapi belum terlihat oleh pasien."}
+            </p>
+          </div>
+          <Link href="/dashboard/hospital/settings" className="btn-ghost shrink-0">
+            Ubah di Pengaturan
+          </Link>
         </div>
-        <button
-          onClick={toggleEnabled}
-          disabled={togglingEnabled || loading}
-          role="switch"
-          aria-checked={enabled}
-          aria-label="Tampilkan kerohanian di tablet pasien"
-          className={cn(
-            "relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50",
-            enabled ? "bg-brand-500" : "bg-line"
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
-              enabled ? "translate-x-6" : "translate-x-1"
-            )}
-          />
-        </button>
-      </div>
+      )}
 
       {loading ? (
         <div className="card">
@@ -246,6 +237,20 @@ export default function SpiritualPage() {
               </article>
             );
           })}
+        </div>
+      )}
+
+      {meta && !loading && contents.length > 0 && (
+        <div className="card mt-4">
+          <Pagination
+            page={meta.page}
+            pages={meta.pages}
+            total={meta.total}
+            limit={meta.limit}
+            onPage={setPage}
+            noun="konten"
+            className="border-t-0"
+          />
         </div>
       )}
 

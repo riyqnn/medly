@@ -40,6 +40,9 @@ CREATE TABLE hospitals (
     code VARCHAR UNIQUE, -- Made nullable for register flow
     name VARCHAR NOT NULL,
     address TEXT,
+    -- Brands the dashboard, the staff portals and the bedside tablets.
+    -- NULL falls back to the Medly mark.
+    logo_url VARCHAR,
     spiritual_support_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -233,7 +236,7 @@ CREATE TABLE treatment_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
     admission_id UUID NOT NULL REFERENCES patient_admissions(id) ON DELETE CASCADE,
-    category VARCHAR NOT NULL CHECK (category IN ('DOCTOR_VISIT','MEDICATION','LAB','RADIOLOGY','PHYSIO','CONTROL')),
+    category VARCHAR NOT NULL CHECK (category IN ('DOCTOR_VISIT','MEDICATION','LAB','RADIOLOGY','PHYSIO','PROCEDURE','CONTROL')),
     title VARCHAR NOT NULL,
     description TEXT,
     scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,

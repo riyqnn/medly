@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
 import { PageShell, PageHeader, EmptyState, Loading } from "@/src/features/shell/components/Page";
+import { Pagination } from "@/src/features/shell/components/Pagination";
+import type { Paged } from "@/src/features/shell/pagination";
 import { Modal, FormError } from "@/src/features/shell/components/Modal";
 import { MEAL_SCHEDULES, formatRupiah } from "@/src/features/shell/constants";
 import { cn } from "@/src/lib/utils";
@@ -34,6 +36,8 @@ const EMPTY_FORM = {
 
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [meta, setMeta] = useState<Paged<Meal> | null>(null);
+  const [page, setPage] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -43,17 +47,26 @@ export default function MealsPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     setLoading(true);
-    const [mRes, cRes] = await Promise.all([fetch("/api/meals"), fetch("/api/meal-categories")]);
-    if (mRes.ok) setMeals(await mRes.json());
+    // Categories stay unpaginated — they fill the form's select, so a partial
+    // page would quietly hide options.
+    const [mRes, cRes] = await Promise.all([
+      fetch(`/api/meals?page=${page}`),
+      fetch("/api/meal-categories"),
+    ]);
+    if (mRes.ok) {
+      const j: Paged<Meal> = await mRes.json();
+      setMeals(j.data);
+      setMeta(j);
+    }
     if (cRes.ok) setCategories(await cRes.json());
     setLoading(false);
-  }
+  }, [page]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   function openAdd() {
     setEditTarget(null);
@@ -215,6 +228,20 @@ export default function MealsPage() {
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {meta && !loading && meals.length > 0 && (
+        <div className="card mt-4">
+          <Pagination
+            page={meta.page}
+            pages={meta.pages}
+            total={meta.total}
+            limit={meta.limit}
+            onPage={setPage}
+            noun="menu"
+            className="border-t-0"
+          />
         </div>
       )}
 
