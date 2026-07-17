@@ -7,14 +7,7 @@ export default function LoginPage() {
     <AuthShell
       title="Masuk ke Medly"
       subtitle="Kelola pasien, jadwal, dan layanan rawat inap Anda."
-      footer={
-        <>
-          Belum punya workspace?{" "}
-          <Link href="/register" className="row-link">
-            Daftarkan rumah sakit
-          </Link>
-        </>
-      }
+      footer={null}
       pitch={{
         heading: "Satu layar di sisi tempat tidur, terhubung ke seluruh rumah sakit.",
         body: "Medly menghubungkan pasien dengan perawat, jadwal perawatan, makanan, edukasi, dan hiburan — semuanya bersumber dari sistem yang Anda kelola.",

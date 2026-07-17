@@ -28,7 +28,7 @@ export async function login(data: LoginInput) {
   redirect("/dashboard");
 }
 
-export async function registerHospital(data: RegisterHospitalInput) {
+export async function createHospitalByAdmin(data: RegisterHospitalInput) {
   // Validate input
   const parsed = registerHospitalSchema.safeParse(data);
   if (!parsed.success) {
@@ -60,15 +60,7 @@ export async function registerHospital(data: RegisterHospitalInput) {
     return { success: false, error: authError?.message || "Failed to create account" };
   }
 
-  // Sign the new user in immediately after creation
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
-
-  if (signInError) {
-    return { success: false, error: "Account created but failed to sign in. Please login manually." };
-  }
+  // No auto sign-in since this is done by superadmin
 
 
   // 3. Create Profile record linking user and hospital
@@ -87,8 +79,8 @@ export async function registerHospital(data: RegisterHospitalInput) {
     return { success: false, error: "Failed to assign role to profile" };
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
 }
 
 export async function logout() {

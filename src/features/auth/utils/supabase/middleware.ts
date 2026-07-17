@@ -37,7 +37,6 @@ export async function updateSession(request: NextRequest) {
   // Routes that bypass ALL session checks — always accessible
   const isPublicRoute =
     pathname === '/login' ||
-    pathname === '/register' ||
     pathname === '/unauthorized' ||
     pathname === '/forbidden' ||
     pathname.startsWith('/api/auth/') ||
@@ -86,8 +85,8 @@ export async function updateSession(request: NextRequest) {
     return response
   }
 
-  // ── Logged-in user on a public/auth page → redirect to dashboard
-  if (isPublicRoute) {
+  // ── Logged-in user on a login page → redirect to dashboard
+  if (pathname === '/login') {
     const url = request.nextUrl.clone()
     url.pathname = `/dashboard/${role}`
     return NextResponse.redirect(url)
@@ -95,6 +94,12 @@ export async function updateSession(request: NextRequest) {
 
   // ── Dashboard RBAC ──────────────────────────────────────────
   if (pathname.startsWith('/dashboard')) {
+    if (pathname === '/dashboard') {
+      const url = request.nextUrl.clone()
+      url.pathname = `/dashboard/${role}`
+      return NextResponse.redirect(url)
+    }
+
     const allowedPath = `/dashboard/${role}`
     if (!pathname.startsWith(allowedPath)) {
       const url = request.nextUrl.clone()

@@ -31,11 +31,8 @@ export default function Home() {
           <span className="text-lg font-extrabold tracking-tight text-ink">Medly</span>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/login" className="btn-ghost">
+          <Link href="/login" className="btn-primary">
             Masuk
-          </Link>
-          <Link href="/register" className="btn-primary">
-            Daftarkan rumah sakit
           </Link>
         </div>
       </header>
@@ -65,11 +62,8 @@ export default function Home() {
               edukasi, dan pendampingan — terhubung langsung dengan sistem operasional rumah sakit.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/register" className="btn-primary px-5 py-3">
-                Mulai sekarang <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/login" className="btn-ghost px-5 py-3">
-                Masuk ke dashboard
+              <Link href="/login" className="btn-primary px-5 py-3">
+                Masuk ke dashboard <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>

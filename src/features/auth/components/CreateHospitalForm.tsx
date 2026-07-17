@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { registerHospital } from "../actions";
+import { createHospitalByAdmin } from "../actions";
 import { registerHospitalSchema } from "../schemas";
 
-export function RegisterForm() {
+export function CreateHospitalForm() {
   const [hospitalName, setHospitalName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,8 +29,17 @@ export function RegisterForm() {
       return;
     }
 
-    const result = await registerHospital({ hospitalName, email, password, confirmPassword });
-    if (result && !result.success) setError(result.error);
+    const result = await createHospitalByAdmin({ hospitalName, email, password, confirmPassword });
+    if (result && !result.success) {
+      setError(result.error || "Failed to create hospital");
+    } else {
+      // Clear form on success
+      setHospitalName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      alert("Hospital created successfully!");
+    }
     setLoading(false);
   };
 
