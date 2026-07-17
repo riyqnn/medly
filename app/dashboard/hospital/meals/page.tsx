@@ -40,6 +40,7 @@ export default function MealsPage() {
   const [editTarget, setEditTarget] = useState<Meal | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -159,12 +160,14 @@ export default function MealsPage() {
               style={{ animationDelay: `${i * 40}ms` }}
               className="group card flex animate-fade-up flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
             >
-              <div className="relative grid h-32 place-items-center overflow-hidden bg-brand-50">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-brand-50">
                 {m.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.image_url} alt="" className="h-full w-full object-cover" />
+                  <img src={m.image_url} alt={m.name} className="h-full w-full object-cover" />
                 ) : (
-                  <UtensilsCrossed className="h-7 w-7 text-brand-300" strokeWidth={1.6} />
+                  <div className="flex h-full items-center justify-center">
+                    <UtensilsCrossed className="h-10 w-10 text-brand-300" strokeWidth={1.4} />
+                  </div>
                 )}
                 <button
                   onClick={() => toggleAvailability(m)}
@@ -229,7 +232,7 @@ export default function MealsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Harga (Rp)</label>
               <input
@@ -270,13 +273,44 @@ export default function MealsPage() {
           </div>
 
           <div>
-            <label className="label">URL gambar</label>
+            <label className="label">Gambar Makanan</label>
             <input
-              value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              className="field"
-              placeholder="https://…"
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setUploading(true);
+                setError("");
+                try {
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  const res = await fetch("/api/upload", { method: "POST", body: fd });
+                  if (res.ok) {
+                    const data = await res.json();
+                    setForm({ ...form, image_url: data.url });
+                  } else {
+                    const err = await res.json();
+                    setError(err.error || "Gagal mengunggah gambar");
+                  }
+                } catch (err: any) {
+                  setError(err.message || "Gagal mengunggah gambar");
+                } finally {
+                  setUploading(false);
+                }
+              }}
+              className="block w-full text-sm text-ink-soft file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2.5 file:text-sm file:font-extrabold file:text-brand-700 hover:file:bg-brand-100"
             />
+            {uploading && <p className="mt-2 text-xs font-semibold text-brand-600 animate-pulse">Mengunggah ke Pinata (IPFS)...</p>}
+            {form.image_url && (
+              <div className="mt-3 overflow-hidden rounded-xl border border-line bg-canvas">
+                <img
+                  src={form.image_url}
+                  alt="Preview"
+                  className="aspect-video w-full object-contain"
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -316,7 +350,7 @@ export default function MealsPage() {
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
               Batal
             </button>
-            <button type="submit" disabled={saving} className="btn-primary">
+            <button type="submit" disabled={saving || uploading} className="btn-primary">
               {saving ? "Menyimpan…" : "Simpan"}
             </button>
           </div>

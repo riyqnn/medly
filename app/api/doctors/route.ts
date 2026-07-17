@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/features/auth/utils/supabase/server";
+import { supabaseAdmin } from "@/src/features/auth/utils/supabase/admin";
 
 async function getHospitalId(req: NextRequest, supabase: any) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -51,12 +52,33 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    if (!body.full_name || !body.employee_code) {
-      return NextResponse.json({ error: "Missing full_name or employee_code" }, { status: 422 });
+    if (!body.full_name || !body.employee_code || !body.email || !body.password) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 422 });
     }
+
+    // 1. Create auth user
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: body.email,
+      password: body.password,
+      email_confirm: true,
+      user_metadata: { hospital_id: hospitalId, role: "DOCTOR" }
+    });
+
+    if (authError || !authData.user) {
+      return NextResponse.json({ error: authError?.message || "Failed to create user account" }, { status: 400 });
+    }
+
+    // 2. Create profile
+    await supabaseAdmin.from("profiles").insert([{
+      id: authData.user.id,
+      hospital_id: hospitalId,
+      full_name: body.full_name,
+      role: "DOCTOR"
+    }]);
 
     const { data: { user } } = await supabase.auth.getUser();
 
+    // 3. Create doctor record
     const { data: doctor, error } = await supabase
       .from("doctors")
       .insert({
