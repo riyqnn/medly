@@ -46,7 +46,7 @@ function isHeading(p: string) {
 
 /**
  * A real book, not a scrolling wall. Text is measured against the actual
- * column height and cut into pages, so "hal. 12 dari 340" means something and
+ * column height and cut into pages, so "p. 12 of 340" means something and
  * a patient can put the tablet down and come back to the same page.
  */
 export function BookReader({ src, title }: { src: string; title: string }) {
@@ -68,7 +68,7 @@ export function BookReader({ src, title }: { src: string; title: string }) {
         const raw = await res.text();
         if (alive) setParas(parseBook(raw));
       } catch {
-        if (alive) setError("Buku ini tidak dapat dimuat sekarang.");
+        if (alive) setError("This book won't load right now.");
       }
     })();
     return () => {
@@ -203,7 +203,7 @@ export function BookReader({ src, title }: { src: string; title: string }) {
       <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <SizeButton
-            label="Perkecil huruf"
+            label="Smaller text"
             disabled={sizeIdx === 0}
             onClick={() => setSizeIdx((i) => Math.max(0, i - 1))}
           >
@@ -211,7 +211,7 @@ export function BookReader({ src, title }: { src: string; title: string }) {
           </SizeButton>
           <span className="w-10 text-center text-sm font-extrabold text-ink-mute">Aa</span>
           <SizeButton
-            label="Perbesar huruf"
+            label="Larger text"
             disabled={sizeIdx === SIZES.length - 1}
             onClick={() => setSizeIdx((i) => Math.min(SIZES.length - 1, i + 1))}
           >
@@ -229,7 +229,7 @@ export function BookReader({ src, title }: { src: string; title: string }) {
         </div>
 
         <p className="tabular shrink-0 text-base font-extrabold text-ink-soft">
-          {total ? `Hal. ${page + 1} dari ${total}` : "Menyiapkan halaman…"}
+          {total ? `Page ${page + 1} of ${total}` : "Preparing pages…"}
         </p>
       </div>
 
@@ -252,7 +252,7 @@ function TurnButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-label={dir === "prev" ? "Halaman sebelumnya" : "Halaman berikutnya"}
+      aria-label={dir === "prev" ? "Previous page" : "Next page"}
       className={cn(
         "grid w-16 shrink-0 place-items-center rounded-3xl border border-line bg-white text-brand-600 shadow-card transition active:scale-[0.97] hover:border-brand-300 hover:bg-brand-50 sm:w-20",
         disabled && "pointer-events-none opacity-30"

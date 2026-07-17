@@ -52,14 +52,14 @@ export default function EntertainmentPage() {
       .finally(() => setLoading(false));
   }, [admissionId]);
 
-  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
+  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Loading…</div>;
 
   const present = Object.keys(ENTERTAINMENT_CATEGORIES).filter((k) => contents.some((c) => c.category === k));
   const shown = filter === "ALL" ? contents : contents.filter((c) => c.category === filter);
 
   return (
     <>
-      <BedsideTitle>Hiburan</BedsideTitle>
+      <BedsideTitle>Entertainment</BedsideTitle>
 
       {present.length > 1 && (
         <div className="mb-4 flex shrink-0 flex-wrap gap-2">
@@ -74,7 +74,7 @@ export default function EntertainmentPage() {
                   : "border-line bg-white text-ink-soft shadow-card hover:border-brand-300 hover:bg-brand-50"
               )}
             >
-              {c === "ALL" ? "Semua" : ENTERTAINMENT_CATEGORIES[c].label}
+              {c === "ALL" ? "All" : ENTERTAINMENT_CATEGORIES[c].label}
             </button>
           ))}
         </div>
@@ -84,7 +84,7 @@ export default function EntertainmentPage() {
         items={shown}
         perPage={8}
         className="grid-cols-2 grid-rows-4 sm:grid-cols-3 sm:grid-rows-3 xl:grid-cols-4 xl:grid-rows-2"
-        empty="Belum ada konten hiburan"
+        empty="No entertainment content yet"
         render={(c) => {
           const Icon = ICONS[c.category] ?? Film;
           return (

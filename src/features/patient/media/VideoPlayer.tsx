@@ -98,7 +98,7 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string | nu
     return (
       <div className="grid aspect-video w-full place-items-center rounded-3xl bg-ink px-6 text-center">
         <p className="text-xl font-bold text-white/80">
-          Video ini tidak dapat diputar sekarang. Coba lagi nanti atau pilih tayangan lain.
+          This video won’t play right now. Try again later, or pick something else to watch.
         </p>
       </div>
     );
@@ -145,7 +145,7 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string | nu
       {/* Centre control. Big while idle, out of the way once playing. */}
       <button
         onClick={toggle}
-        aria-label={playing ? "Jeda" : "Putar"}
+        aria-label={playing ? "Pause" : "Play"}
         className={cn(
           "absolute left-1/2 top-1/2 grid h-24 w-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-brand-600 shadow-float transition-all duration-300 active:scale-95",
           playing && !chrome && "pointer-events-none scale-75 opacity-0"
@@ -170,11 +170,11 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string | nu
           ref={railRef}
           role="slider"
           tabIndex={0}
-          aria-label="Posisi video"
+          aria-label="Video position"
           aria-valuemin={0}
           aria-valuemax={Math.round(duration)}
           aria-valuenow={Math.round(time)}
-          aria-valuetext={`${clock(time)} dari ${clock(duration)}`}
+          aria-valuetext={`${clock(time)} of ${clock(duration)}`}
           onKeyDown={(e) => {
             if (e.key === "ArrowRight") skip(10);
             if (e.key === "ArrowLeft") skip(-10);
@@ -216,13 +216,13 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string | nu
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <CtlButton onClick={toggle} label={playing ? "Jeda" : "Putar"}>
+          <CtlButton onClick={toggle} label={playing ? "Pause" : "Play"}>
             {playing ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 fill-current" />}
           </CtlButton>
-          <CtlButton onClick={() => skip(-10)} label="Mundur 10 detik">
+          <CtlButton onClick={() => skip(-10)} label="Back 10 seconds">
             <RotateCcw className="h-6 w-6" strokeWidth={2.4} />
           </CtlButton>
-          <CtlButton onClick={() => skip(10)} label="Maju 10 detik">
+          <CtlButton onClick={() => skip(10)} label="Forward 10 seconds">
             <RotateCw className="h-6 w-6" strokeWidth={2.4} />
           </CtlButton>
 
@@ -233,11 +233,11 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string | nu
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <CtlButton
               onClick={() => videoRef.current && (videoRef.current.muted = !videoRef.current.muted)}
-              label={muted ? "Bunyikan" : "Bisukan"}
+              label={muted ? "Unmute" : "Mute"}
             >
               {muted ? <VolumeX className="h-6 w-6" strokeWidth={2.4} /> : <Volume2 className="h-6 w-6" strokeWidth={2.4} />}
             </CtlButton>
-            <CtlButton onClick={toggleFullscreen} label={full ? "Keluar layar penuh" : "Layar penuh"}>
+            <CtlButton onClick={toggleFullscreen} label={full ? "Exit full screen" : "Full screen"}>
               {full ? <Minimize className="h-6 w-6" strokeWidth={2.4} /> : <Maximize className="h-6 w-6" strokeWidth={2.4} />}
             </CtlButton>
           </div>

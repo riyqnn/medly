@@ -7,9 +7,9 @@ import { cn } from "@/src/lib/utils";
 type Grid = number[]; // 81 cells, 0 = empty
 
 const LEVELS = {
-  Mudah: 40,
-  Sedang: 32,
-  Sulit: 26,
+  Easy: 40,
+  Medium: 32,
+  Hard: 26,
 } as const;
 type Level = keyof typeof LEVELS;
 
@@ -91,7 +91,7 @@ function generate(clues: number): { puzzle: Grid; solution: Grid } {
  * state can't survive into a grid it doesn't belong to.
  */
 export function Sudoku() {
-  const [level, setLevel] = useState<Level>("Mudah");
+  const [level, setLevel] = useState<Level>("Easy");
   const [seed, setSeed] = useState(0);
   return (
     <Board
@@ -216,10 +216,10 @@ function Board({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <GameButton onClick={() => place(0)} icon={Eraser} label="Hapus" />
-          <GameButton onClick={hint} icon={Lightbulb} label="Bantuan" />
-          <GameButton onClick={() => setChecked(true)} icon={Check} label="Periksa" />
-          <GameButton onClick={onNewPuzzle} icon={RotateCcw} label="Baru" />
+          <GameButton onClick={() => place(0)} icon={Eraser} label="Erase" />
+          <GameButton onClick={hint} icon={Lightbulb} label="Hint" />
+          <GameButton onClick={() => setChecked(true)} icon={Check} label="Check" />
+          <GameButton onClick={onNewPuzzle} icon={RotateCcw} label="New" />
         </div>
 
         <p
@@ -228,7 +228,7 @@ function Board({
             solved ? "text-brand-600" : "text-ink-mute"
           )}
         >
-          {solved ? "Selesai! Semua benar." : "Pilih kotak, lalu tekan angka."}
+          {solved ? "Solved — every square checks out." : "Pick a square, then tap a number."}
         </p>
       </div>
     </div>

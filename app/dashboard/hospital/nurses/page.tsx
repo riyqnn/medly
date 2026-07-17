@@ -5,9 +5,9 @@ export default function NursesPage() {
     <StaffManager
       role="NURSE"
       endpoint="/api/nurses"
-      title="Perawat"
-      description="Perawat dengan akun login akan menerima permintaan pasien di portalnya."
-      addLabel="Tambah perawat"
+      title="Nurses"
+      description="Nurses with a login receive patient requests in their portal."
+      addLabel="Add nurse"
     />
   );
 }

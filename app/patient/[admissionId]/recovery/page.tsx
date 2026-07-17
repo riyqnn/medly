@@ -54,15 +54,15 @@ export default function RecoveryPage() {
     load();
   }
 
-  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
+  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Loading…</div>;
 
   if (!progress)
     return (
       <>
-        <BedsideTitle>Progres Pemulihan</BedsideTitle>
+        <BedsideTitle>Recovery Progress</BedsideTitle>
         <div className="grid min-h-0 flex-1 place-items-center rounded-3xl border-2 border-dashed border-line">
           <p className="px-6 text-center text-xl font-bold text-ink-mute">
-            Tim medis belum menetapkan target pemulihan Anda
+            Your care team hasn’t set recovery goals yet
           </p>
         </div>
       </>
@@ -76,7 +76,7 @@ export default function RecoveryPage() {
 
   return (
     <>
-      <BedsideTitle>Progres Pemulihan</BedsideTitle>
+      <BedsideTitle>Recovery Progress</BedsideTitle>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="flex min-h-0 flex-col items-center justify-center gap-5 rounded-3xl border border-line bg-white p-6 shadow-card">
@@ -98,10 +98,10 @@ export default function RecoveryPage() {
             </svg>
             <div className="text-center">
               <p className="tabular text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-                Hari {progress.current_day}
+                Day {progress.current_day}
               </p>
               <p className="mt-1 text-sm font-bold text-ink-mute">
-                {progress.estimated_total_days ? `dari ${progress.estimated_total_days} hari` : "masa rawat"}
+                {progress.estimated_total_days ? `of ${progress.estimated_total_days} days` : "of stay"}
               </p>
             </div>
           </div>
@@ -114,16 +114,16 @@ export default function RecoveryPage() {
 
         <div className="flex min-h-0 flex-col rounded-3xl border border-line bg-white p-5 shadow-card">
           <div className="mb-3 flex shrink-0 items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">Target hari ini</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">Today’s goals</p>
             <p className="tabular text-base font-extrabold text-brand-600">
-              {done}/{items.length} selesai
+              {done}/{items.length} done
             </p>
           </div>
           <Pager
             items={items}
             perPage={5}
             className="grid-cols-1 grid-rows-5"
-            empty="Belum ada target aktivitas"
+            empty="No activity goals yet"
             render={(item) => (
               <button
                 key={item.id}

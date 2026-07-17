@@ -5,9 +5,9 @@ export default function DoctorsPage() {
     <StaffManager
       role="DOCTOR"
       endpoint="/api/doctors"
-      title="Dokter"
-      description="Tambahkan dokter agar bisa ditugaskan ke pasien dan dijadwalkan."
-      addLabel="Tambah dokter"
+      title="Doctors"
+      description="Add a doctor so they can be assigned to patients and scheduled."
+      addLabel="Add doctor"
     />
   );
 }

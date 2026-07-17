@@ -59,7 +59,7 @@ export function EmptyState({
 }
 
 /** Centred spinner used while a panel's data is in flight. */
-export function Loading({ label = "Memuat…" }: { label?: string }) {
+export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
     <div className="flex items-center justify-center gap-2.5 px-6 py-14 text-sm font-medium text-ink-mute">
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-brand-500" />

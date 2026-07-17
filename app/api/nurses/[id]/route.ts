@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (error) {
       if (error.code === "23505") {
-        return NextResponse.json({ error: "Kode pegawai sudah dipakai" }, { status: 409 });
+        return NextResponse.json({ error: "Employee code already in use" }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

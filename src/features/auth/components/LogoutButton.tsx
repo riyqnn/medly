@@ -14,7 +14,7 @@ export function LogoutButton() {
           className="h-[18px] w-[18px] transition-transform duration-200 group-hover:translate-x-0.5"
           strokeWidth={2.1}
         />
-        Keluar
+        Sign out
       </button>
     </form>
   );

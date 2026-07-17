@@ -39,7 +39,7 @@ export default function RegisterPatientPage() {
         router.push(`/dashboard/hospital/patients/${patient.id}`);
         router.refresh();
       } else {
-        setError((await res.json()).error ?? "Gagal mendaftarkan pasien");
+        setError((await res.json()).error ?? "Couldn't register the patient");
       }
     } catch (err: any) {
       setError(err.message ?? "Terjadi kesalahan");
@@ -54,12 +54,12 @@ export default function RegisterPatientPage() {
         href="/dashboard/hospital/patients"
         className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-ink-soft transition hover:text-brand-600"
       >
-        <ChevronLeft className="h-4 w-4" /> Semua pasien
+        <ChevronLeft className="h-4 w-4" /> All patients
       </Link>
 
-      <h1 className="text-2xl font-extrabold tracking-tight text-ink">Daftarkan pasien</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-ink">Register patient</h1>
       <p className="mt-1 text-sm text-ink-soft">
-        Setelah terdaftar, rawat inapkan pasien untuk membuka layar Medly di kamarnya.
+        Once registered, admit the patient to open the Medly screen in their room.
       </p>
 
       <form onSubmit={handleSubmit} className="card mt-6 space-y-5 p-6">
@@ -68,13 +68,13 @@ export default function RegisterPatientPage() {
         <div className="grid grid-cols-2 gap-5">
           <div>
             <label htmlFor="mrn" className="label">
-              Nomor rekam medis
+              Medical record number
             </label>
             <input id="mrn" required name="mrn" type="text" className="field" placeholder="MRN-12345" />
           </div>
           <div>
             <label htmlFor="full_name" className="label">
-              Nama lengkap
+              Full name
             </label>
             <input
               id="full_name"
@@ -90,18 +90,18 @@ export default function RegisterPatientPage() {
         <div className="grid grid-cols-2 gap-5">
           <div>
             <label htmlFor="dob" className="label">
-              Tanggal lahir
+              Date of birth
             </label>
             <input id="dob" name="dob" type="date" className="field" />
           </div>
           <div>
             <label htmlFor="gender" className="label">
-              Jenis kelamin
+              Gender
             </label>
             <select id="gender" name="gender" className="field">
-              <option value="">Pilih…</option>
-              <option value="male">Laki-laki</option>
-              <option value="female">Perempuan</option>
+              <option value="">Choose…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
             </select>
           </div>
         </div>
@@ -109,13 +109,13 @@ export default function RegisterPatientPage() {
         <div className="grid grid-cols-2 gap-5">
           <div>
             <label htmlFor="contact_number" className="label">
-              Nomor kontak
+              Contact number
             </label>
             <input id="contact_number" name="contact_number" type="tel" className="field" placeholder="+62…" />
           </div>
           <div>
             <label htmlFor="emergency_contact" className="label">
-              Kontak darurat
+              Emergency contact
             </label>
             <input
               id="emergency_contact"
@@ -129,10 +129,10 @@ export default function RegisterPatientPage() {
 
         <div className="flex justify-end gap-3 border-t border-line pt-5">
           <Link href="/dashboard/hospital/patients" className="btn-ghost">
-            Batal
+            Cancel
           </Link>
           <button type="submit" disabled={loading} className="btn-primary">
-            {loading ? "Menyimpan…" : "Daftarkan pasien"}
+            {loading ? "Menyimpan…" : "Register patient"}
           </button>
         </div>
       </form>

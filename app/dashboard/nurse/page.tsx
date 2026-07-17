@@ -29,9 +29,9 @@ interface NurseRequest {
 
 function waitedFor(iso: string) {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "baru saja";
-  if (mins < 60) return `${mins} menit`;
-  return `${Math.floor(mins / 60)} jam ${mins % 60} menit`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
 export default function NurseDashboard() {
@@ -103,24 +103,24 @@ export default function NurseDashboard() {
   return (
     <div className="min-h-screen bg-canvas">
       <PortalHeader
-        role={hospital.name ? `Portal perawat · ${hospital.name}` : "Portal perawat"}
-        title="Permintaan Pasien"
-        subtitle="Diurutkan dari prioritas tertinggi dan yang paling lama menunggu."
+        role={hospital.name ? `Portal perawat · ${hospital.name}` : "Nurse portal"}
+        title="Patient Requests"
+        subtitle="Sorted by highest priority, then longest waiting."
         logoUrl={hospital.logo_url}
       />
 
       <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">
         {linked === false && (
           <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-            Akun Anda belum terhubung ke data perawat mana pun, jadi permintaan yang Anda tangani
-            tidak tercatat atas nama Anda. Minta admin membuka menu Perawat lalu menautkan akun ini.
+            Your account isn’t linked to a nurse record, so requests you handle won’t be recorded under
+            your name. Ask an admin to open the Nurses page and link this account.
           </p>
         )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <section>
             <div className="mb-4 flex items-center gap-2.5">
-              <h2 className="eyebrow">Permintaan aktif</h2>
+              <h2 className="eyebrow">Active requests</h2>
               {ordered.length > 0 && (
                 <span className="chip bg-brand-50 text-brand-700">
                   <span className="relative flex h-1.5 w-1.5">
@@ -134,14 +134,14 @@ export default function NurseDashboard() {
 
             {loading ? (
               <div className="card">
-                <Loading label="Memuat permintaan…" />
+                <Loading label="Loading requests…" />
               </div>
             ) : ordered.length === 0 ? (
               <div className="card">
                 <EmptyState
                   icon={Check}
-                  title="Semua permintaan tertangani"
-                  hint="Permintaan baru dari pasien akan muncul di sini secara otomatis."
+                  title="Every request handled"
+                  hint="New patient requests appear here automatically."
                 />
               </div>
             ) : (
@@ -171,13 +171,13 @@ export default function NurseDashboard() {
                       </h3>
 
                       <p className="mt-1.5 text-sm font-bold text-ink">
-                        Kamar {r.patient_admissions?.rooms?.room_number ?? "—"}
+                        Room {r.patient_admissions?.rooms?.room_number ?? "—"}
                       </p>
                       <p className="text-sm text-ink-soft">
                         {r.patient_admissions?.patients?.full_name ?? "—"}
                       </p>
                       <p className="tabular mt-0.5 text-xs text-ink-mute">
-                        {formatTime(r.created_at)} · menunggu {waitedFor(r.created_at)}
+                        {formatTime(r.created_at)} · waiting {waitedFor(r.created_at)}
                       </p>
 
                       <div className="mt-5 border-t border-line pt-4">
@@ -187,7 +187,7 @@ export default function NurseDashboard() {
                             disabled={busy === r.id}
                             className="btn-primary w-full"
                           >
-                            Ambil permintaan
+                            Take request
                           </button>
                         ) : (
                           <button
@@ -195,7 +195,7 @@ export default function NurseDashboard() {
                             disabled={busy === r.id}
                             className="btn-primary w-full"
                           >
-                            <Check className="h-4 w-4" /> Tandai selesai
+                            <Check className="h-4 w-4" /> Mark done
                           </button>
                         )}
                       </div>
@@ -207,11 +207,11 @@ export default function NurseDashboard() {
           </section>
 
           <aside>
-            <h2 className="eyebrow mb-4">Riwayat shift saya</h2>
+            <h2 className="eyebrow mb-4">My shift history</h2>
             <div className="card overflow-hidden">
               {history.length === 0 ? (
                 <p className="px-5 py-10 text-center text-sm text-ink-mute">
-                  Belum ada permintaan yang Anda selesaikan.
+                  You haven’t resolved any requests yet.
                 </p>
               ) : (
                 <ul className="divide-y divide-line">
@@ -226,7 +226,7 @@ export default function NurseDashboard() {
                         </span>
                       </div>
                       <p className="mt-0.5 text-xs text-ink-soft">
-                        Kamar {h.patient_admissions?.rooms?.room_number ?? "—"} ·{" "}
+                        Room {h.patient_admissions?.rooms?.room_number ?? "—"} ·{" "}
                         {h.patient_admissions?.patients?.full_name ?? "—"}
                       </p>
                     </li>

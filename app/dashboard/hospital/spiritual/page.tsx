@@ -116,13 +116,13 @@ export default function SpiritualPage() {
           body: JSON.stringify(form),
         });
     setSaving(false);
-    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setError((await res.json()).error ?? "Couldn't save");
     setShowModal(false);
     load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus konten ini?")) return;
+    if (!confirm("Delete this content?")) return;
     await fetch(`/api/spiritual/${id}`, { method: "DELETE" });
     load();
   }
@@ -140,12 +140,12 @@ export default function SpiritualPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Layanan pasien · opsional"
-        title="Kerohanian"
-        description="Jadwal sholat, murottal, doa harian, dan renungan."
+        eyebrow="Patient services · optional"
+        title="Spiritual"
+        description="Prayer times, murottal, daily prayers and reflections."
         action={
           <button onClick={openAdd} className="btn-primary">
-            <Plus className="h-4 w-4" /> Tambah konten
+            <Plus className="h-4 w-4" /> Add content
           </button>
         }
       />
@@ -157,16 +157,16 @@ export default function SpiritualPage() {
         <div className="card mb-5 flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
             <p className="text-sm font-extrabold text-ink">
-              {enabled ? "Tayang di tablet pasien" : "Disembunyikan dari tablet pasien"}
+              {enabled ? "Live on patient tablets" : "Hidden from patient tablets"}
             </p>
             <p className="mt-0.5 text-xs text-ink-soft">
               {enabled
-                ? "Tab Kerohanian terlihat oleh semua pasien rumah sakit ini."
-                : "Konten di bawah tersimpan, tapi belum terlihat oleh pasien."}
+                ? "Every patient in this hospital can see the Spiritual tab."
+                : "The content below is saved, but patients can't see it yet."}
             </p>
           </div>
           <Link href="/dashboard/hospital/settings" className="btn-ghost shrink-0">
-            Ubah di Pengaturan
+            Change in Settings
           </Link>
         </div>
       )}
@@ -179,11 +179,11 @@ export default function SpiritualPage() {
         <div className="card">
           <EmptyState
             icon={Sparkles}
-            title="Belum ada konten kerohanian"
-            hint="Tambahkan doa, murottal, atau renungan untuk mendampingi pasien."
+            title="No spiritual content yet"
+            hint="Add prayers, murottal or reflections to accompany patients."
             action={
               <button onClick={openAdd} className="btn-primary">
-                <Plus className="h-4 w-4" /> Tambah konten
+                <Plus className="h-4 w-4" /> Add content
               </button>
             }
           />
@@ -210,7 +210,7 @@ export default function SpiritualPage() {
                       c.is_published ? "bg-brand-50 text-brand-700" : "bg-canvas text-ink-mute"
                     )}
                   >
-                    {c.is_published ? "Tayang" : "Draf"}
+                    {c.is_published ? "Live" : "Draft"}
                   </button>
                 </div>
 
@@ -223,11 +223,11 @@ export default function SpiritualPage() {
                 {c.hospital_id && (
                   <div className="mt-4 flex gap-2 border-t border-line pt-3">
                     <button onClick={() => openEdit(c)} className="btn-ghost flex-1 px-3 py-2 text-xs">
-                      <Pencil className="h-3.5 w-3.5" /> Ubah
+                      <Pencil className="h-3.5 w-3.5" /> Edit
                     </button>
                     <button
                       onClick={() => handleDelete(c.id)}
-                      title="Hapus"
+                      title="Delete"
                       className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line text-ink-mute transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -248,7 +248,7 @@ export default function SpiritualPage() {
             total={meta.total}
             limit={meta.limit}
             onPage={setPage}
-            noun="konten"
+            noun="items"
             className="border-t-0"
           />
         </div>
@@ -257,24 +257,24 @@ export default function SpiritualPage() {
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title={editTarget ? "Ubah konten" : "Tambah konten"}
+        title={editTarget ? "Edit content" : "Add content"}
       >
         <FormError>{error}</FormError>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Judul</label>
+            <label className="label">Title</label>
             <input
               required
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="field"
-              placeholder="Doa kesembuhan"
+              placeholder="Prayer for healing"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Kategori</label>
+              <label className="label">Category</label>
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -288,7 +288,7 @@ export default function SpiritualPage() {
               </select>
             </div>
             <div>
-              <label className="label">Urutan tampil</label>
+              <label className="label">Display order</label>
               <input
                 type="number"
                 value={form.display_order}
@@ -299,7 +299,7 @@ export default function SpiritualPage() {
           </div>
 
           <div>
-            <label className="label">Isi</label>
+            <label className="label">Body</label>
             <textarea
               rows={4}
               value={form.body_text}
@@ -309,7 +309,7 @@ export default function SpiritualPage() {
           </div>
 
           <div>
-            <label className="label">URL media</label>
+            <label className="label">Media URL</label>
             <input
               value={form.media_url}
               onChange={(e) => setForm({ ...form, media_url: e.target.value })}
@@ -325,15 +325,15 @@ export default function SpiritualPage() {
               onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
               className="h-4 w-4 accent-brand-500"
             />
-            <span className="text-sm font-semibold text-ink">Tayangkan di tablet pasien</span>
+            <span className="text-sm font-semibold text-ink">Publish to patient tablets</span>
           </label>
 
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? "Menyimpan…" : "Simpan"}
+              {saving ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>

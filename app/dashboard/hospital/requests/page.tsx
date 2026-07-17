@@ -29,10 +29,10 @@ interface NurseRequest {
 /** How long a request has been waiting, in plain words. */
 function waitedFor(iso: string) {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "baru saja";
-  if (mins < 60) return `${mins} menit`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
-  return `${h} jam ${mins % 60} menit`;
+  return `${h}h ${mins % 60}m`;
 }
 
 /**
@@ -63,9 +63,9 @@ export default function NurseRequestsMonitorPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Perawatan"
-        title="Permintaan Perawat"
-        description="Pantau antrean dan waktu tunggu. Penanganan dilakukan perawat dari portalnya."
+        eyebrow="Care"
+        title="Nurse Requests"
+        description="Monitor the queue and waiting times. Nurses handle requests from their own portal."
         action={
           list && list.total > 0 ? (
             <span className="chip bg-brand-50 text-brand-700">
@@ -73,7 +73,7 @@ export default function NurseRequestsMonitorPage() {
                 <span className="absolute inline-flex h-full w-full animate-halo rounded-full bg-brand-500" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-500" />
               </span>
-              {list.total} terbuka · {waiting} belum diambil
+              {list.total} open · {waiting} not yet picked up
             </span>
           ) : null
         }
@@ -84,21 +84,21 @@ export default function NurseRequestsMonitorPage() {
       <div className="card mb-5 flex items-start gap-3 p-4">
         <Eye className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />
         <p className="text-sm leading-relaxed text-ink-soft">
-          Tampilan ini hanya untuk memantau. Yang menerima dan menyelesaikan permintaan adalah
-          perawat yang bertugas — status di bawah ikut berubah begitu mereka menanganinya.
+          This view is for monitoring only. Nurses on duty are the ones who take and resolve requests —
+          the statuses below update as soon as they do.
         </p>
       </div>
 
       {loading && !list ? (
         <div className="card">
-          <Loading label="Memuat permintaan…" />
+          <Loading label="Loading requests…" />
         </div>
       ) : requests.length === 0 ? (
         <div className="card">
           <EmptyState
             icon={Check}
-            title="Semua permintaan tertangani"
-            hint="Permintaan baru dari pasien akan muncul di sini secara otomatis."
+            title="Every request handled"
+            hint="New patient requests appear here automatically."
           />
         </div>
       ) : (
@@ -130,18 +130,18 @@ export default function NurseRequestsMonitorPage() {
 
                   <div className="mt-2 space-y-0.5 text-sm">
                     <p className="font-bold text-ink">
-                      Kamar {r.patient_admissions?.rooms?.room_number ?? "—"}
+                      Room {r.patient_admissions?.rooms?.room_number ?? "—"}
                     </p>
                     <p className="text-ink-soft">{r.patient_admissions?.patients?.full_name ?? "—"}</p>
                     <p className="tabular text-xs text-ink-mute">
-                      {formatTime(r.created_at)} · menunggu {waitedFor(r.created_at)}
+                      {formatTime(r.created_at)} · waiting {waitedFor(r.created_at)}
                     </p>
                   </div>
 
                   <p className="mt-4 border-t border-line pt-3 text-xs font-semibold text-ink-mute">
                     {r.nurses?.full_name
-                      ? `Ditangani ${r.nurses.full_name}`
-                      : "Menunggu diambil perawat"}
+                      ? `Handled by ${r.nurses.full_name}`
+                      : "Waiting for a nurse to pick it up"}
                   </p>
                 </article>
               );
@@ -156,7 +156,7 @@ export default function NurseRequestsMonitorPage() {
                 total={list.total}
                 limit={list.limit}
                 onPage={setPage}
-                noun="permintaan"
+                noun="requests"
                 className="border-t-0"
               />
             </div>

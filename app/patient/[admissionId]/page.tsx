@@ -16,10 +16,10 @@ import { cn } from "@/src/lib/utils";
 
 function greeting() {
   const h = new Date().getHours();
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 19) return "Selamat sore";
-  return "Selamat malam";
+  if (h < 11) return "Good morning";
+  if (h < 15) return "Good afternoon";
+  if (h < 19) return "Good evening";
+  return "Good night";
 }
 
 const firstName = (name?: string | null) => (name ?? "").split(/\s+/)[0] || "Bapak/Ibu";
@@ -63,14 +63,14 @@ export default async function PatientHomePage({
   const upcoming = next?.[0];
 
   const tiles: { href: string; label: string; icon: LucideIcon; primary?: boolean }[] = [
-    { href: `${base}/nurse-call`, label: "Panggil Perawat", icon: BellRing, primary: true },
-    { href: `${base}/medical-info`, label: "Info Medis", icon: Stethoscope },
-    { href: `${base}/meals`, label: "Makanan", icon: UtensilsCrossed },
-    { href: `${base}/entertainment`, label: "Hiburan", icon: Clapperboard },
-    { href: `${base}/education`, label: "Edukasi", icon: GraduationCap },
-    { href: `${base}/recovery`, label: "Pemulihan", icon: HeartPulse },
+    { href: `${base}/nurse-call`, label: "Call Nurse", icon: BellRing, primary: true },
+    { href: `${base}/medical-info`, label: "Medical Info", icon: Stethoscope },
+    { href: `${base}/meals`, label: "Meals", icon: UtensilsCrossed },
+    { href: `${base}/entertainment`, label: "Entertainment", icon: Clapperboard },
+    { href: `${base}/education`, label: "Education", icon: GraduationCap },
+    { href: `${base}/recovery`, label: "Recovery", icon: HeartPulse },
     ...(session.hospital?.spiritual_support_enabled
-      ? [{ href: `${base}/spiritual`, label: "Kerohanian", icon: Sparkles }]
+      ? [{ href: `${base}/spiritual`, label: "Spiritual", icon: Sparkles }]
       : []),
   ];
 
@@ -82,13 +82,13 @@ export default async function PatientHomePage({
           {greeting()}, {firstName(session.patient?.full_name)}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <Fact label="Hari rawat" value={`Hari ke-${currentDay}`} />
-          {doctor && <Fact label="Dokter" value={doctor.full_name} />}
-          {session.primary_diagnosis && <Fact label="Diagnosa" value={session.primary_diagnosis} />}
+          <Fact label="Day of stay" value={`Day ${currentDay}`} />
+          {doctor && <Fact label="Doctors" value={doctor.full_name} />}
+          {session.primary_diagnosis && <Fact label="Diagnosis" value={session.primary_diagnosis} />}
           {upcoming && (
             <Fact
-              label="Berikutnya"
-              value={`${new Date(upcoming.scheduled_time).toLocaleTimeString("id-ID", {
+              label="Next"
+              value={`${new Date(upcoming.scheduled_time).toLocaleTimeString("en-US", {
                 hour: "2-digit",
                 minute: "2-digit",
               })} · ${upcoming.title}`}

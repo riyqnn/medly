@@ -54,7 +54,7 @@ export default function HospitalSettingsPage() {
       }),
     });
     setSaving(false);
-    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setError((await res.json()).error ?? "Couldn't save");
     setSaved(true);
     // The sidebar reads the name and logo on the server, so a refresh is what
     // makes the new identity actually appear.
@@ -64,14 +64,14 @@ export default function HospitalSettingsPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Rumah sakit"
-        title="Pengaturan"
-        description="Identitas rumah sakit yang tampil di dashboard, portal staf, dan tablet pasien."
+        eyebrow="Hospital"
+        title="Settings"
+        description="The hospital identity shown on the dashboard, the staff portals and patient tablets."
       />
 
       {loading || !form ? (
         <div className="card">
-          <Loading label="Memuat pengaturan…" />
+          <Loading label="Loading settings…" />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
@@ -79,7 +79,7 @@ export default function HospitalSettingsPage() {
             <FormError>{error}</FormError>
 
             <div>
-              <label className="label">Nama rumah sakit</label>
+              <label className="label">Hospital name</label>
               <input
                 required
                 value={form.name}
@@ -90,7 +90,7 @@ export default function HospitalSettingsPage() {
             </div>
 
             <div>
-              <label className="label">Kode rumah sakit</label>
+              <label className="label">Hospital code</label>
               <input
                 value={form.code ?? ""}
                 onChange={(e) => set("code", e.target.value)}
@@ -98,12 +98,12 @@ export default function HospitalSettingsPage() {
                 placeholder="MYP"
               />
               <p className="mt-1.5 text-xs text-ink-mute">
-                Kode singkat internal, harus unik antar rumah sakit.
+                A short internal code, unique across hospitals.
               </p>
             </div>
 
             <div>
-              <label className="label">Alamat</label>
+              <label className="label">Address</label>
               <textarea
                 value={form.address ?? ""}
                 onChange={(e) => set("address", e.target.value)}
@@ -122,11 +122,10 @@ export default function HospitalSettingsPage() {
               />
               <span>
                 <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
-                  <Sparkles className="h-3.5 w-3.5 text-brand-500" /> Dukungan kerohanian
+                  <Sparkles className="h-3.5 w-3.5 text-brand-500" /> Spiritual support
                 </span>
                 <span className="mt-1 block text-xs leading-relaxed text-ink-soft">
-                  Menampilkan menu kerohanian di tablet pasien. Matikan jika rumah sakit Anda
-                  tidak menyediakan layanan ini.
+                  Shows the spiritual menu on patient tablets. Turn it off if your hospital doesn’t offer this service.
                 </span>
               </span>
             </label>
@@ -138,7 +137,7 @@ export default function HospitalSettingsPage() {
                 </span>
               )}
               <button type="submit" disabled={saving} className="btn-primary">
-                {saving ? "Menyimpan…" : "Simpan perubahan"}
+                {saving ? "Menyimpan…" : "Save changes"}
               </button>
             </div>
           </div>
@@ -147,8 +146,8 @@ export default function HospitalSettingsPage() {
             <ImageUpload
               value={form.logo_url ?? ""}
               onChange={(url) => set("logo_url", url || null)}
-              label="Logo rumah sakit"
-              hint="PNG transparan, maksimal 2 MB. Kosongkan untuk memakai logo Medly."
+              label="Hospital logo"
+              hint="Transparent PNG, 2 MB max. Leave empty to use the Medly mark."
               preview="square"
             />
 
@@ -160,15 +159,15 @@ export default function HospitalSettingsPage() {
                 <BrandMark src={form.logo_url} className="h-10 w-10 shrink-0" />
                 <div className="min-w-0 leading-none">
                   <p className="truncate text-[15px] font-extrabold tracking-tight text-ink">
-                    {form.name || "Nama rumah sakit"}
+                    {form.name || "Hospital name"}
                   </p>
-                  <p className="mt-1 text-[11px] font-medium text-ink-mute">Dashboard rumah sakit</p>
+                  <p className="mt-1 text-[11px] font-medium text-ink-mute">Hospital dashboard</p>
                 </div>
               </div>
             </div>
 
             <p className={cn("text-xs leading-relaxed text-ink-mute")}>
-              Logo ini juga dipakai di portal dokter, portal perawat, dan tablet pasien.
+              This logo is also used in the doctor portal, the nurse portal and patient tablets.
             </p>
           </div>
         </form>

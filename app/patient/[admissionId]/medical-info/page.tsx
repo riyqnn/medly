@@ -50,7 +50,7 @@ export default function MedicalInfoPage() {
     })();
   }, [admissionId]);
 
-  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
+  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Loading…</div>;
 
   const latest = vitals[0];
   const doctor = session?.doctors.find((d) => d.role === "MAIN_DOCTOR") ?? session?.doctors[0];
@@ -80,16 +80,16 @@ export default function MedicalInfoPage() {
 
   return (
     <>
-      <BedsideTitle>Info Medis</BedsideTitle>
+      <BedsideTitle>Medical Info</BedsideTitle>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         {/* Left: the facts */}
         <div className="flex min-h-0 flex-col gap-4">
           <div className="grid shrink-0 grid-cols-2 gap-3">
-            <Fact label="Dokter" value={doctor?.full_name ?? "—"} sub={doctor?.specialization ?? undefined} />
-            <Fact label="Diagnosa" value={session?.primary_diagnosis ?? "—"} />
-            <Fact label="Kamar" value={session?.room?.room_number ?? "—"} />
-            <Fact label="Hari rawat" value={`Hari ke-${session?.day_of_stay ?? 1}`} />
+            <Fact label="Doctors" value={doctor?.full_name ?? "—"} sub={doctor?.specialization ?? undefined} />
+            <Fact label="Diagnosis" value={session?.primary_diagnosis ?? "—"} />
+            <Fact label="Rooms" value={session?.room?.room_number ?? "—"} />
+            <Fact label="Day of stay" value={`Day ${session?.day_of_stay ?? 1}`} />
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-line bg-white p-5 shadow-card">
@@ -98,7 +98,7 @@ export default function MedicalInfoPage() {
             </p>
             {!latest ? (
               <div className="grid flex-1 place-items-center">
-                <p className="text-lg font-bold text-ink-mute">Belum ada pengukuran</p>
+                <p className="text-lg font-bold text-ink-mute">No measurements yet</p>
               </div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
@@ -120,13 +120,13 @@ export default function MedicalInfoPage() {
         {/* Right: what happens next */}
         <div className="flex min-h-0 flex-col rounded-3xl border border-line bg-white p-5 shadow-card">
           <p className="mb-3 shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">
-            Jadwal perawatan
+            Treatment schedule
           </p>
           <Pager
             items={upcoming}
             perPage={4}
             className="grid-cols-1 grid-rows-4"
-            empty="Tidak ada jadwal mendatang"
+            empty="Nothing coming up"
             render={(s) => {
               const cat = TREATMENT_CATEGORIES[s.category];
               const st = TREATMENT_STATUS[s.status];
@@ -137,7 +137,7 @@ export default function MedicalInfoPage() {
                 >
                   <span className={cn("absolute inset-y-0 left-0 w-1.5", cat?.tone.strong)} />
                   <div className="tabular w-16 shrink-0 pl-2 text-xl font-extrabold text-ink">
-                    {new Date(s.scheduled_time).toLocaleTimeString("id-ID", {
+                    {new Date(s.scheduled_time).toLocaleTimeString("en-US", {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
@@ -145,7 +145,7 @@ export default function MedicalInfoPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-extrabold leading-tight text-ink">{s.title}</p>
                     <p className="truncate text-sm font-semibold text-ink-mute">
-                      {new Date(s.scheduled_time).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}
+                      {new Date(s.scheduled_time).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" })}
                       {" · "}
                       {cat?.label}
                     </p>

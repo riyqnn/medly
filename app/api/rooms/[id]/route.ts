@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .eq("status", "ACTIVE");
       if ((count ?? 0) > Number(updates.capacity)) {
         return NextResponse.json(
-          { error: `Kamar sedang diisi ${count} pasien. Kapasitas tidak bisa kurang dari itu.` },
+          { error: `This room currently holds ${count} patient(s). Capacity can't go below that.` },
           { status: 409 }
         );
       }
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (error) {
       if (error.code === "23505") {
-        return NextResponse.json({ error: "Nomor kamar sudah dipakai" }, { status: 409 });
+        return NextResponse.json({ error: "That room number is taken" }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -71,7 +71,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   if ((count ?? 0) > 0) {
     return NextResponse.json(
-      { error: "Kamar masih ditempati pasien. Pindahkan pasiennya lebih dulu." },
+      { error: "The room is still occupied. Move the patient out first." },
       { status: 409 }
     );
   }

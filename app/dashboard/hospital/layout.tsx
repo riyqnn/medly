@@ -14,7 +14,7 @@ export default async function HospitalLayout({ children }: { children: React.Rea
     .eq("id", user?.id ?? "")
     .single();
 
-  const hospitalName = (profile?.hospitals as any)?.name ?? "Rumah Sakit";
+  const hospitalName = (profile?.hospitals as any)?.name ?? "Hospital";
   const logoUrl = (profile?.hospitals as any)?.logo_url ?? null;
   const userName = profile?.full_name ?? "Admin";
 

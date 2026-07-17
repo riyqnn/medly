@@ -36,10 +36,10 @@ const HOUR_H = 68;
    it, and the window we use to decide that two treatments collide. */
 const SLOT_MIN = 45;
 
-const DAY_LABELS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-/* Two letters, because single initials collide three ways in Indonesian
-   (Senin / Selasa / Sabtu all start with S). */
-const DAY_INITIALS = ["Sn", "Sl", "Rb", "Km", "Jm", "Sb", "Mg"];
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/* Two letters, because single initials are ambiguous: Tuesday/Thursday and
+   Saturday/Sunday would each show the same letter. */
+const DAY_INITIALS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const EMPTY_FORM = {
   admission_id: "",
   category: "DOCTOR_VISIT",
@@ -242,7 +242,7 @@ export default function TreatmentsPage() {
     });
     const data = await res.json();
     setSaving(false);
-    if (!res.ok) return setError(data.error || "Gagal menyimpan jadwal");
+    if (!res.ok) return setError(data.error || "Couldn't save the schedule");
     setShowCreate(false);
     load();
   }
@@ -258,7 +258,7 @@ export default function TreatmentsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm("Hapus jadwal ini?")) return;
+    if (!confirm("Delete this schedule?")) return;
     await fetch(`/api/treatment-schedules/${id}`, { method: "DELETE" });
     setDetail(null);
     load();
@@ -272,7 +272,7 @@ export default function TreatmentsPage() {
     );
   }
 
-  const monthLabel = weekStart.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  const monthLabel = weekStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const todayInWeek = now && days.some((d) => sameDay(d, now));
   const nowTop = now ? ((minutesOf(now) - startHour * 60) / 60) * HOUR_H : 0;
   const nowVisible = todayInWeek && nowTop >= 0 && nowTop <= gridHeight;
@@ -283,12 +283,12 @@ export default function TreatmentsPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Perawatan"
-        title="Jadwal Perawatan"
-        description="Semua jadwal di sini langsung tampil di tablet pasien terkait."
+        eyebrow="Care"
+        title="Treatment Schedule"
+        description="Everything scheduled here appears on that patient's tablet."
         action={
           <button onClick={() => openCreate()} className="btn-primary">
-            <Plus className="h-4 w-4" /> Buat jadwal
+            <Plus className="h-4 w-4" /> Create schedule
           </button>
         }
       />
@@ -299,18 +299,18 @@ export default function TreatmentsPage() {
           <div className="card p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-extrabold tracking-tight text-ink">
-                {anchor.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
+                {anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
               </p>
               <div className="flex gap-1">
                 <button
-                  aria-label="Bulan sebelumnya"
+                  aria-label="Previous month"
                   onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
                   className="grid h-7 w-7 place-items-center rounded-lg text-ink-soft transition hover:bg-brand-50 hover:text-brand-700"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
-                  aria-label="Bulan berikutnya"
+                  aria-label="Next month"
                   onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}
                   className="grid h-7 w-7 place-items-center rounded-lg text-ink-soft transition hover:bg-brand-50 hover:text-brand-700"
                 >
@@ -366,10 +366,10 @@ export default function TreatmentsPage() {
 
           <div className="card p-4">
             <p className="eyebrow mb-3">
-              Agenda {selectedDay.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+              Agenda {selectedDay.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
             </p>
             {agenda.length === 0 ? (
-              <p className="py-4 text-center text-xs text-ink-mute">Tidak ada jadwal.</p>
+              <p className="py-4 text-center text-xs text-ink-mute">Nothing scheduled.</p>
             ) : (
               <ul className="space-y-1">
                 {agenda.map((s) => {
@@ -383,7 +383,7 @@ export default function TreatmentsPage() {
                         <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", cat?.tone.strong)} />
                         <span className="min-w-0 flex-1">
                           <span className="tabular block text-xs font-bold text-ink">
-                            {new Date(s.scheduled_time).toLocaleTimeString("id-ID", {
+                            {new Date(s.scheduled_time).toLocaleTimeString("en-US", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
@@ -404,14 +404,14 @@ export default function TreatmentsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
             <div className="flex items-center gap-2">
               <button
-                aria-label="Minggu sebelumnya"
+                aria-label="Previous week"
                 onClick={() => setAnchor(addDays(weekStart, -7))}
                 className="grid h-8 w-8 place-items-center rounded-lg border border-line text-ink-soft transition hover:bg-brand-50 hover:text-brand-700"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
-                aria-label="Minggu berikutnya"
+                aria-label="Next week"
                 onClick={() => setAnchor(addDays(weekStart, 7))}
                 className="grid h-8 w-8 place-items-center rounded-lg border border-line text-ink-soft transition hover:bg-brand-50 hover:text-brand-700"
               >
@@ -425,7 +425,7 @@ export default function TreatmentsPage() {
                 }}
                 className="rounded-lg border border-line px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-50"
               >
-                Hari ini
+                Today
               </button>
               <p className="ml-1 text-sm font-extrabold capitalize tracking-tight text-ink">{monthLabel}</p>
             </div>
@@ -545,7 +545,7 @@ export default function TreatmentsPage() {
                               {item.title}
                             </span>
                             <span className="tabular block truncate text-[10px] font-semibold opacity-75">
-                              {at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                              {at.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                               {item.patient_admissions?.rooms?.room_number
                                 ? ` · ${item.patient_admissions.rooms.room_number}`
                                 : ""}
@@ -564,7 +564,7 @@ export default function TreatmentsPage() {
                     style={{ top: nowTop }}
                   >
                     <span className="tabular w-[56px] pr-2 text-right text-[10px] font-extrabold text-brand-600">
-                      {now!.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                      {now!.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                     <span className="relative h-px flex-1 bg-brand-500">
                       <span className="absolute -left-0.5 -top-[3px] h-[7px] w-[7px] rounded-full bg-brand-500" />
@@ -579,8 +579,8 @@ export default function TreatmentsPage() {
             <div className="border-t border-line">
               <EmptyState
                 icon={CalendarDays}
-                title="Belum ada jadwal minggu ini"
-                hint="Klik petak jam mana pun di atas untuk membuat jadwal pada waktu tersebut."
+                title="Nothing scheduled this week"
+                hint="Click any time slot above to create a schedule at that hour."
               />
             </div>
           )}
@@ -591,24 +591,24 @@ export default function TreatmentsPage() {
       <Modal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Buat jadwal perawatan"
-        description="Jadwal akan langsung muncul di tablet pasien."
+        title="Create treatment schedule"
+        description="The schedule appears on the patient's tablet right away."
         width="max-w-lg"
       >
         <FormError>{error}</FormError>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Pasien (admisi aktif)</label>
+            <label className="label">Patient (active admission)</label>
             <select
               required
               value={form.admission_id}
               onChange={(e) => setForm({ ...form, admission_id: e.target.value })}
               className="field"
             >
-              <option value="">Pilih pasien…</option>
+              <option value="">Choose a patient…</option>
               {admissions.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.patients?.full_name} — {a.rooms?.room_number ?? "tanpa kamar"}
+                  {a.patients?.full_name} — {a.rooms?.room_number ?? "no room"}
                 </option>
               ))}
             </select>
@@ -616,7 +616,7 @@ export default function TreatmentsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Kategori</label>
+              <label className="label">Category</label>
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -630,7 +630,7 @@ export default function TreatmentsPage() {
               </select>
             </div>
             <div>
-              <label className="label">Waktu</label>
+              <label className="label">Time</label>
               <input
                 required
                 type="datetime-local"
@@ -642,24 +642,24 @@ export default function TreatmentsPage() {
           </div>
 
           <div>
-            <label className="label">Judul</label>
+            <label className="label">Title</label>
             <input
               required
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="field"
-              placeholder="mis. Visit pagi dr. Siti"
+              placeholder="e.g. Morning round, Dr. Siti"
             />
           </div>
 
           <div>
-            <label className="label">Dokter terkait</label>
+            <label className="label">Assigned doctors</label>
             <select
               value={form.related_doctor_id}
               onChange={(e) => setForm({ ...form, related_doctor_id: e.target.value })}
               className="field"
             >
-              <option value="">Tidak ada</option>
+              <option value="">None</option>
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.full_name}
@@ -669,22 +669,22 @@ export default function TreatmentsPage() {
           </div>
 
           <div>
-            <label className="label">Catatan untuk pasien</label>
+            <label className="label">Note for the patient</label>
             <textarea
               rows={2}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="field resize-none"
-              placeholder="Opsional — tampil di tablet pasien"
+              placeholder="Optional — shown on the patient's tablet"
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setShowCreate(false)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? "Menyimpan…" : "Buat jadwal"}
+              {saving ? "Menyimpan…" : "Create schedule"}
             </button>
           </div>
         </form>
@@ -701,28 +701,28 @@ export default function TreatmentsPage() {
           <div className="space-y-5">
             <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-canvas p-4">
               <div>
-                <dt className="eyebrow">Waktu</dt>
+                <dt className="eyebrow">Time</dt>
                 <dd className="tabular mt-1 text-sm font-bold text-ink">
-                  {new Date(detail.scheduled_time).toLocaleString("id-ID", {
+                  {new Date(detail.scheduled_time).toLocaleString("en-US", {
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
                 </dd>
               </div>
               <div>
-                <dt className="eyebrow">Pasien</dt>
+                <dt className="eyebrow">Patients</dt>
                 <dd className="mt-1 text-sm font-bold text-ink">
                   {detail.patient_admissions?.patients?.full_name ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="eyebrow">Kamar</dt>
+                <dt className="eyebrow">Rooms</dt>
                 <dd className="mt-1 text-sm font-bold text-ink">
                   {detail.patient_admissions?.rooms?.room_number ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="eyebrow">Dokter</dt>
+                <dt className="eyebrow">Doctors</dt>
                 <dd className="mt-1 text-sm font-bold text-ink">{detail.doctors?.full_name ?? "—"}</dd>
               </div>
             </dl>
@@ -751,10 +751,10 @@ export default function TreatmentsPage() {
 
             <div className="flex justify-between border-t border-line pt-4">
               <button onClick={() => remove(detail.id)} className="btn-danger">
-                <Trash2 className="h-4 w-4" /> Hapus
+                <Trash2 className="h-4 w-4" /> Delete
               </button>
               <button onClick={() => setDetail(null)} className="btn-ghost">
-                Tutup
+                Close
               </button>
             </div>
           </div>

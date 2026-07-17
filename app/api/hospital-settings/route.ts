@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest) {
 
     if (body.name !== undefined) {
       const name = String(body.name).trim();
-      if (!name) return NextResponse.json({ error: "Nama rumah sakit wajib diisi." }, { status: 400 });
+      if (!name) return NextResponse.json({ error: "Hospital name is required." }, { status: 400 });
       updates.name = name;
     }
     // Blank strings mean "cleared", not "unchanged" — code and address are
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest) {
       // `code` is UNIQUE across hospitals; say so instead of leaking the
       // Postgres constraint name.
       if (error.code === "23505") {
-        return NextResponse.json({ error: "Kode rumah sakit ini sudah dipakai." }, { status: 409 });
+        return NextResponse.json({ error: "That hospital code is already taken." }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

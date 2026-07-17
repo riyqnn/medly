@@ -22,7 +22,7 @@ function deal(): Card[] {
 }
 
 /**
- * "Main lagi" remounts the board with a new key rather than resetting four
+ * "Play again" remounts the board with a new key rather than resetting four
  * pieces of state by hand — a fresh game is a fresh board.
  */
 export function Memory() {
@@ -70,7 +70,7 @@ function Board({ onNewGame }: { onNewGame: () => void }) {
             <button
               key={card.id}
               onClick={() => flip(i)}
-              aria-label={up ? card.face : "Kartu tertutup"}
+              aria-label={up ? card.face : "Face-down card"}
               className={cn(
                 "grid min-h-0 place-items-center rounded-2xl border-2 text-[clamp(24px,6vh,52px)] transition-all duration-200 active:scale-95",
                 up
@@ -89,13 +89,13 @@ function Board({ onNewGame }: { onNewGame: () => void }) {
 
       <div className="flex shrink-0 items-center justify-center gap-5">
         <p className="text-lg font-extrabold text-ink-soft">
-          {done ? `Selesai dalam ${moves} langkah!` : `${moves} langkah`}
+          {done ? `Solved in ${moves} moves!` : `${moves} moves`}
         </p>
         <button
           onClick={onNewGame}
           className="flex h-12 items-center gap-2 rounded-2xl border border-line bg-white px-5 text-base font-extrabold text-ink-soft shadow-card transition active:scale-95 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
         >
-          <RotateCcw className="h-5 w-5" strokeWidth={2.4} /> Main lagi
+          <RotateCcw className="h-5 w-5" strokeWidth={2.4} /> Play again
         </button>
       </div>
     </div>

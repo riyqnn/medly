@@ -29,7 +29,7 @@ interface DoctorSchedule {
   status: string;
 }
 
-const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function DoctorDashboard() {
   const hospital = useMyHospital();
@@ -81,39 +81,39 @@ export default function DoctorDashboard() {
   return (
     <div className="min-h-screen bg-canvas">
       <PortalHeader
-        role={hospital.name ? `Portal dokter · ${hospital.name}` : "Portal dokter"}
-        title="Pasien & Jadwal Saya"
-        subtitle="Pasien rawat inap yang ditugaskan kepada Anda."
+        role={hospital.name ? `Portal dokter · ${hospital.name}` : "Doctor portal"}
+        title="My Patients & Schedule"
+        subtitle="The inpatients assigned to you."
         logoUrl={hospital.logo_url}
       />
 
       <main className="mx-auto max-w-6xl animate-fade-up px-6 py-7">
         {linked === false && (
           <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-            Akun Anda belum terhubung ke data dokter mana pun, jadi pasien dan jadwal Anda belum bisa
-            ditampilkan. Minta admin membuka menu Dokter lalu menautkan akun ini.
+            Your account isn’t linked to a doctor record, so your patients and schedule can’t be shown.
+            Ask an admin to open the Doctors page and link this account.
           </p>
         )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section>
-            <h2 className="eyebrow mb-4">Pasien rawat inap saya</h2>
+            <h2 className="eyebrow mb-4">My inpatients</h2>
             <div className="card overflow-hidden">
               {loading ? (
-                <Loading label="Memuat pasien…" />
+                <Loading label="Loading patients…" />
               ) : patients.length === 0 ? (
                 <EmptyState
                   icon={BedDouble}
-                  title="Belum ada pasien"
-                  hint="Pasien yang ditugaskan admin kepada Anda akan muncul di sini."
+                  title="No patients yet"
+                  hint="Patients your admin assigns to you will appear here."
                 />
               ) : (
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-line bg-canvas/60">
-                      <th className="eyebrow px-6 py-3 font-bold">Pasien</th>
-                      <th className="eyebrow px-6 py-3 font-bold">Lokasi</th>
-                      <th className="eyebrow px-6 py-3 font-bold">Peran saya</th>
+                      <th className="eyebrow px-6 py-3 font-bold">Patient</th>
+                      <th className="eyebrow px-6 py-3 font-bold">Location</th>
+                      <th className="eyebrow px-6 py-3 font-bold">My role</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -165,12 +165,12 @@ export default function DoctorDashboard() {
           </section>
 
           <aside>
-            <h2 className="eyebrow mb-4">Jadwal praktik saya</h2>
+            <h2 className="eyebrow mb-4">My practice schedule</h2>
             <div className="card p-5">
               {loading ? (
-                <Loading label="Memuat jadwal…" />
+                <Loading label="Loading schedule…" />
               ) : schedules.length === 0 ? (
-                <EmptyState icon={CalendarClock} title="Belum ada jadwal praktik" />
+                <EmptyState icon={CalendarClock} title="No practice schedule yet" />
               ) : (
                 <ul className="space-y-3">
                   {schedules.map((s) => (
@@ -190,7 +190,7 @@ export default function DoctorDashboard() {
                             </span>
                             <span className="mt-0.5 text-[9px] font-bold uppercase leading-none">
                               {s.specific_date
-                                ? new Date(s.specific_date).toLocaleString("id-ID", { month: "short" })
+                                ? new Date(s.specific_date).toLocaleString("en-US", { month: "short" })
                                 : ""}
                             </span>
                           </>
@@ -200,7 +200,7 @@ export default function DoctorDashboard() {
                         <p className="tabular text-sm font-extrabold text-ink">
                           {s.start_time.slice(0, 5)} – {s.end_time.slice(0, 5)}
                         </p>
-                        <p className="truncate text-xs text-ink-soft">{s.location || "Lokasi belum diisi"}</p>
+                        <p className="truncate text-xs text-ink-soft">{s.location || "No location set"}</p>
                         {s.status !== "ACTIVE" && (
                           <span className="chip mt-1 bg-amber-50 text-amber-700">{s.status}</span>
                         )}

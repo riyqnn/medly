@@ -42,7 +42,7 @@ export function Pagination({
       )}
     >
       <p className="tabular text-xs font-semibold text-ink-mute">
-        {first}–{last} dari {total} {noun}
+        {first}–{last} of {total} {noun}
       </p>
 
       {pages > 1 && (
@@ -50,7 +50,7 @@ export function Pagination({
           <button
             onClick={() => onPage(page - 1)}
             disabled={page <= 1}
-            aria-label="Halaman sebelumnya"
+            aria-label="Previous page"
             className="grid h-8 w-8 place-items-center rounded-lg border border-line text-ink-soft transition hover:bg-brand-50 hover:text-brand-700 disabled:pointer-events-none disabled:opacity-40"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -81,7 +81,7 @@ export function Pagination({
           <button
             onClick={() => onPage(page + 1)}
             disabled={page >= pages}
-            aria-label="Halaman berikutnya"
+            aria-label="Next page"
             className="grid h-8 w-8 place-items-center rounded-lg border border-line text-ink-soft transition hover:bg-brand-50 hover:text-brand-700 disabled:pointer-events-none disabled:opacity-40"
           >
             <ChevronRight className="h-4 w-4" />

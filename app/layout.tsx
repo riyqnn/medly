@@ -11,7 +11,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Medly — Digital Bedside Companion",
   description:
-    "Satu layar di sisi tempat tidur yang menghubungkan pasien dengan perawat, jadwal, makanan, edukasi, dan hiburan selama masa rawat inap.",
+    "One screen at the bedside connecting patients to nurses, schedules, meals, education and entertainment throughout their stay.",
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${jakarta.variable} h-full antialiased`}>
+    <html lang="en" className={`${jakarta.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

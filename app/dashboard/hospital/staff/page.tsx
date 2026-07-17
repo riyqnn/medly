@@ -40,9 +40,9 @@ export default async function StaffListPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Sistem"
-        title="Akun Staf"
-        description="Semua akun dokter dan perawat di rumah sakit Anda."
+        eyebrow="System"
+        title="Staff Accounts"
+        description="Every doctor and nurse account in your hospital."
       />
 
       {unlinked.length > 0 && (
@@ -57,13 +57,13 @@ export default async function StaffListPage() {
                 {unlinked.map((s) => s.full_name).join(", ")} bisa masuk, tetapi portalnya kosong —
                 permintaan pasien tidak akan tercatat atas nama mereka. Buka{" "}
                 <Link href="/dashboard/hospital/doctors" className="font-bold underline">
-                  Dokter
+                  Doctors
                 </Link>{" "}
                 atau{" "}
                 <Link href="/dashboard/hospital/nurses" className="font-bold underline">
-                  Perawat
+                  Nurses
                 </Link>{" "}
-                lalu gunakan “Buatkan akun” pada data yang sesuai.
+                then use “Create login” on the matching record.
               </p>
             </div>
           </div>
@@ -74,15 +74,15 @@ export default async function StaffListPage() {
         {!staff || staff.length === 0 ? (
           <EmptyState
             icon={IdCard}
-            title="Belum ada akun staf"
-            hint="Akun dibuat bersamaan saat Anda menambahkan dokter atau perawat."
+            title="No staff accounts yet"
+            hint="Accounts are created at the same time you add a doctor or nurse."
             action={
               <div className="flex gap-2">
                 <Link href="/dashboard/hospital/doctors" className="btn-primary">
-                  <Stethoscope className="h-4 w-4" /> Tambah dokter
+                  <Stethoscope className="h-4 w-4" /> Add doctor
                 </Link>
                 <Link href="/dashboard/hospital/nurses" className="btn-ghost">
-                  <HeartPulse className="h-4 w-4" /> Tambah perawat
+                  <HeartPulse className="h-4 w-4" /> Add nurse
                 </Link>
               </div>
             }
@@ -91,10 +91,10 @@ export default async function StaffListPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-line bg-canvas/60">
-                <th className="eyebrow px-6 py-3 font-bold">Nama</th>
-                <th className="eyebrow px-6 py-3 font-bold">Peran</th>
-                <th className="eyebrow px-6 py-3 font-bold">Data staf</th>
-                <th className="eyebrow px-6 py-3 font-bold">Bergabung</th>
+                <th className="eyebrow px-6 py-3 font-bold">Name</th>
+                <th className="eyebrow px-6 py-3 font-bold">Role</th>
+                <th className="eyebrow px-6 py-3 font-bold">Staff member</th>
+                <th className="eyebrow px-6 py-3 font-bold">Joined</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -117,16 +117,16 @@ export default async function StaffListPage() {
                           member.role === "DOCTOR" ? "bg-brand-50 text-brand-700" : "bg-sky-50 text-sky-700"
                         )}
                       >
-                        {member.role === "DOCTOR" ? "Dokter" : "Perawat"}
+                        {member.role === "DOCTOR" ? "Doctors" : "Nurses"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={cn("chip", isLinked ? "bg-brand-50 text-brand-700" : "bg-amber-50 text-amber-700")}>
-                        {isLinked ? "Terhubung" : "Belum terhubung"}
+                        {isLinked ? "Linked" : "Not linked"}
                       </span>
                     </td>
                     <td className="tabular px-6 py-4 text-ink-soft">
-                      {new Date(member.created_at).toLocaleDateString("id-ID", {
+                      {new Date(member.created_at).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",

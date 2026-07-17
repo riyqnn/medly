@@ -114,7 +114,7 @@ export function MediaViewer({
   return (
     <div className="grid place-items-center py-16 text-center">
       <BookOpen className="mb-3 h-12 w-12 text-brand-200" strokeWidth={1.5} />
-      <p className="text-xl font-bold text-ink-mute">Konten ini belum tersedia.</p>
+      <p className="text-xl font-bold text-ink-mute">This content isn’t available yet.</p>
     </div>
   );
 }

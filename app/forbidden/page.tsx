@@ -10,14 +10,13 @@ export default function ForbiddenPage() {
         </span>
         <p className="eyebrow">Error 403</p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
-          Halaman ini bukan untuk peran Anda
+          This page isn’t for your role
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          Akun Anda tidak punya akses ke dashboard tersebut. Kembali ke dashboard sesuai peran Anda
-          untuk melanjutkan.
+          Your account can’t open that dashboard. Head back to the one for your role to continue.
         </p>
         <Link href="/dashboard" className="btn-primary mt-6 w-full">
-          Kembali ke dashboard saya
+          Back to my dashboard
         </Link>
       </div>
     </div>

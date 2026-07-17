@@ -22,29 +22,29 @@ const TILES: {
 }[] = [
   {
     key: "active_patients",
-    label: "Pasien dirawat",
-    hint: "Admisi aktif saat ini",
+    label: "Admitted patients",
+    hint: "Current admission",
     icon: Users,
     href: "/dashboard/hospital/patients",
   },
   {
     key: "active_nurse_requests",
-    label: "Permintaan terbuka",
-    hint: "Belum selesai ditangani",
+    label: "Open requests",
+    hint: "Not finished yet",
     icon: BellRing,
     href: "/dashboard/hospital/requests",
   },
   {
     key: "today_schedules",
-    label: "Jadwal hari ini",
-    hint: "Visit, obat, lab, tindakan",
+    label: "Today's schedule",
+    hint: "Visits, medication, labs, procedures",
     icon: CalendarDays,
     href: "/dashboard/hospital/treatments",
   },
   {
     key: "today_meal_orders",
-    label: "Pesanan makanan",
-    hint: "Dipesan dari sisi tempat tidur",
+    label: "Meal orders",
+    hint: "Ordered from the bedside",
     icon: UtensilsCrossed,
     href: "/dashboard/hospital/meal-orders",
   },
@@ -52,10 +52,10 @@ const TILES: {
 
 function greeting() {
   const h = new Date().getHours();
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 19) return "Selamat sore";
-  return "Selamat malam";
+  if (h < 11) return "Good morning";
+  if (h < 15) return "Good afternoon";
+  if (h < 19) return "Good evening";
+  return "Good night";
 }
 
 export default function HospitalDashboard() {
@@ -77,7 +77,7 @@ export default function HospitalDashboard() {
     };
   }, []);
 
-  const today = new Date().toLocaleDateString("id-ID", {
+  const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -86,7 +86,7 @@ export default function HospitalDashboard() {
 
   return (
     <PageShell>
-      <PageHeader eyebrow={today} title={`${greeting()}.`} description="Ringkasan aktivitas rumah sakit Anda hari ini." />
+      <PageHeader eyebrow={today} title={`${greeting()}.`} description="Your hospital's activity today, at a glance." />
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {TILES.map((tile, i) => {
@@ -125,19 +125,18 @@ export default function HospitalDashboard() {
         <div className="card animate-fade-up p-6 lg:col-span-2" style={{ animationDelay: "240ms" }}>
           <p className="eyebrow mb-3">Alur Medly</p>
           <h2 className="text-lg font-extrabold tracking-tight text-ink">
-            Semua yang Anda kelola di sini muncul di tablet pasien.
+            Everything you manage here shows up on patient tablets.
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
-            Jadwal, menu, konten edukasi, dan hiburan yang dipublikasikan langsung tampil di layar
-            sisi tempat tidur. Sebaliknya, permintaan perawat dan pesanan makanan dari pasien masuk
-            ke dashboard ini.
+            Schedules, menus, education and entertainment you publish appear on the bedside screen right
+            away. In return, nurse requests and meal orders from patients land in this dashboard.
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <Link href="/dashboard/hospital/patients" className="btn-primary">
-              Buka daftar pasien
+              Open patient list
             </Link>
             <Link href="/dashboard/hospital/treatments" className="btn-ghost">
-              Atur jadwal perawatan
+              Plan treatment schedules
             </Link>
           </div>
         </div>
@@ -152,8 +151,8 @@ export default function HospitalDashboard() {
           ) : stats && stats.active_nurse_requests > 0 ? (
             <div>
               <p className="text-sm leading-relaxed text-ink-soft">
-                <span className="font-extrabold text-ink">{stats.active_nurse_requests} permintaan</span>{" "}
-                dari pasien belum diselesaikan.
+                <span className="font-extrabold text-ink">{stats.active_nurse_requests} requests</span>{" "}
+                from patients are still open.
               </p>
               <Link href="/dashboard/hospital/requests" className="btn-primary mt-4 w-full">
                 Tangani sekarang
@@ -165,7 +164,7 @@ export default function HospitalDashboard() {
                 <span className="h-2 w-2 rounded-full bg-brand-500" />
               </span>
               <p className="text-sm leading-relaxed text-ink-soft">
-                Tidak ada permintaan perawat yang tertunda. Semua sudah tertangani.
+                No nurse requests are pending. Everything has been handled.
               </p>
             </div>
           )}

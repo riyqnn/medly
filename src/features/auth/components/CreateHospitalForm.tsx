@@ -47,7 +47,7 @@ export function CreateHospitalForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="hospital" className="label">
-          Nama rumah sakit
+          Hospital name
         </label>
         <input
           id="hospital"
@@ -62,7 +62,7 @@ export function CreateHospitalForm() {
 
       <div>
         <label htmlFor="email" className="label">
-          Email admin
+          Admin email
         </label>
         <input
           id="email"
@@ -79,7 +79,7 @@ export function CreateHospitalForm() {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="password" className="label">
-            Kata sandi
+            Password
           </label>
           <input
             id="password"
@@ -94,7 +94,7 @@ export function CreateHospitalForm() {
         </div>
         <div>
           <label htmlFor="confirm" className="label">
-            Ulangi sandi
+            Repeat password
           </label>
           <input
             id="confirm"

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       if (error.code === "23505") {
-        return NextResponse.json({ error: "Perawat ini sudah ditugaskan ke pasien tersebut" }, { status: 409 });
+        return NextResponse.json({ error: "This nurse is already assigned to that patient" }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

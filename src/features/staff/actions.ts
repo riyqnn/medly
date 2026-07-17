@@ -18,7 +18,7 @@ async function requireHospitalAdmin(): Promise<Ctx | { error: string }> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Sesi Anda sudah berakhir. Silakan masuk lagi." };
+  if (!user) return { error: "Your session has ended. Please sign in again." };
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -27,7 +27,7 @@ async function requireHospitalAdmin(): Promise<Ctx | { error: string }> {
     .single();
 
   if (!profile || profile.role !== "HOSPITAL" || !profile.hospital_id) {
-    return { error: "Hanya admin rumah sakit yang dapat mengelola staf." };
+    return { error: "Only hospital admins can manage staff." };
   }
   return { hospitalId: profile.hospital_id, userId: user.id };
 }
@@ -56,9 +56,9 @@ async function createLinkedAccount(
   if (error || !data.user) {
     const msg = error?.message ?? "";
     if (/already been registered|already exists/i.test(msg)) {
-      return { error: "Email ini sudah dipakai akun lain." };
+      return { error: "That email already belongs to another account." };
     }
-    return { error: msg || "Gagal membuat akun." };
+    return { error: msg || "Couldn't create the account." };
   }
 
   const { error: profileError } = await supabaseAdmin.from("profiles").insert({
@@ -70,7 +70,7 @@ async function createLinkedAccount(
 
   if (profileError) {
     await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-    return { error: "Gagal menyiapkan profil akun. Tidak ada akun yang dibuat." };
+    return { error: "Couldn't set up the account profile. No account was created." };
   }
 
   return { profileId: data.user.id };
@@ -96,14 +96,14 @@ export async function createStaffMember(input: {
   if ("error" in ctx) return { success: false, error: ctx.error };
 
   if (!input.fullName.trim() || !input.employeeCode.trim()) {
-    return { success: false, error: "Nama dan kode pegawai wajib diisi." };
+    return { success: false, error: "Name and employee code are required." };
   }
   if (input.withAccount) {
     if (!input.email?.trim() || !input.password) {
-      return { success: false, error: "Email dan kata sandi wajib diisi untuk membuat akun." };
+      return { success: false, error: "Email and password are required to create an account." };
     }
     if (input.password.length < 6) {
-      return { success: false, error: "Kata sandi minimal 6 karakter." };
+      return { success: false, error: "Password must be at least 6 characters." };
     }
   }
 
@@ -139,7 +139,7 @@ export async function createStaffMember(input: {
     // Don't strand a login whose staff record failed to save.
     if (profileId) await destroyAccount(profileId);
     if (error.code === "23505") {
-      return { success: false, error: "Kode pegawai ini sudah dipakai di rumah sakit Anda." };
+      return { success: false, error: "That employee code is already used in your hospital." };
     }
     return { success: false, error: error.message };
   }
@@ -161,7 +161,7 @@ export async function addAccountToStaff(input: {
   if ("error" in ctx) return { success: false, error: ctx.error };
 
   if (!input.email.trim() || input.password.length < 6) {
-    return { success: false, error: "Email wajib diisi dan kata sandi minimal 6 karakter." };
+    return { success: false, error: "Email is required and the password must be at least 6 characters." };
   }
 
   const { data: staff } = await supabaseAdmin
@@ -172,8 +172,8 @@ export async function addAccountToStaff(input: {
     .is("deleted_at", null)
     .single();
 
-  if (!staff) return { success: false, error: "Data staf tidak ditemukan." };
-  if (staff.profile_id) return { success: false, error: "Staf ini sudah punya akun." };
+  if (!staff) return { success: false, error: "Staff record not found." };
+  if (staff.profile_id) return { success: false, error: "This staff member already has an account." };
 
   const account = await createLinkedAccount(
     ctx.hospitalId,
@@ -212,7 +212,7 @@ export async function revokeStaffAccount(input: { role: StaffRole; staffId: stri
     .eq("hospital_id", ctx.hospitalId)
     .single();
 
-  if (!staff?.profile_id) return { success: false, error: "Staf ini tidak punya akun." };
+  if (!staff?.profile_id) return { success: false, error: "This staff member has no account." };
 
   // doctors.profile_id / nurses.profile_id are ON DELETE SET NULL, so removing
   // the profile detaches the record without touching the staff data.

@@ -23,9 +23,9 @@ interface Room {
 }
 
 const STATUSES: Record<string, { label: string; chip: string }> = {
-  AVAILABLE: { label: "Tersedia", chip: "bg-brand-50 text-brand-700" },
-  FULL: { label: "Penuh", chip: "bg-amber-50 text-amber-700" },
-  MAINTENANCE: { label: "Perbaikan", chip: "bg-canvas text-ink-mute" },
+  AVAILABLE: { label: "Available", chip: "bg-brand-50 text-brand-700" },
+  FULL: { label: "Full", chip: "bg-amber-50 text-amber-700" },
+  MAINTENANCE: { label: "Maintenance", chip: "bg-canvas text-ink-mute" },
 };
 
 const EMPTY = { room_number: "", ward_name: "", capacity: 1, status: "AVAILABLE" };
@@ -85,13 +85,13 @@ export default function RoomsPage() {
           body: JSON.stringify(form),
         });
     setBusy(false);
-    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setError((await res.json()).error ?? "Couldn't save");
     setShowModal(false);
     load();
   }
 
   async function handleDelete(r: Room) {
-    if (!confirm(`Hapus kamar ${r.room_number}?`)) return;
+    if (!confirm(`Delete room ${r.room_number}?`)) return;
     const res = await fetch(`/api/rooms/${r.id}`, { method: "DELETE" });
     if (!res.ok) return alert((await res.json()).error);
     load();
@@ -103,16 +103,16 @@ export default function RoomsPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Perawatan"
-        title="Kamar"
+        eyebrow="Care"
+        title="Rooms"
         description={
           loading
-            ? "Memuat…"
-            : `${rooms.length} kamar · ${occupied} dari ${totalBeds} tempat tidur terisi`
+            ? "Loading…"
+            : `${rooms.length} rooms · ${occupied} of ${totalBeds} beds occupied`
         }
         action={
           <button onClick={openAdd} className="btn-primary">
-            <Plus className="h-4 w-4" /> Tambah kamar
+            <Plus className="h-4 w-4" /> Add room
           </button>
         }
       />
@@ -125,11 +125,11 @@ export default function RoomsPage() {
         <div className="card">
           <EmptyState
             icon={BedDouble}
-            title="Belum ada kamar"
-            hint="Tambahkan kamar dulu agar pasien bisa dirawat inap dan tabletnya bisa dibuka."
+            title="No rooms yet"
+            hint="Add a room first so patients can be admitted and their tablet can open."
             action={
               <button onClick={openAdd} className="btn-primary">
-                <Plus className="h-4 w-4" /> Tambah kamar
+                <Plus className="h-4 w-4" /> Add room
               </button>
             }
           />
@@ -152,19 +152,19 @@ export default function RoomsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-extrabold tracking-tight text-ink">{r.room_number}</h2>
-                    <p className="text-xs text-ink-soft">{r.ward_name || "Tanpa bangsal"}</p>
+                    <p className="text-xs text-ink-soft">{r.ward_name || "No ward"}</p>
                   </div>
                   <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
                     <button
                       onClick={() => openEdit(r)}
-                      title="Ubah"
+                      title="Edit"
                       className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(r)}
-                      title="Hapus"
+                      title="Delete"
                       className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -177,7 +177,7 @@ export default function RoomsPage() {
                   {Array.from({ length: r.capacity ?? 1 }).map((_, b) => (
                     <span
                       key={b}
-                      title={b < people.length ? "Terisi" : "Kosong"}
+                      title={b < people.length ? "Occupied" : "Empty"}
                       className={cn(
                         "h-2.5 flex-1 rounded-full",
                         r.status === "MAINTENANCE"
@@ -191,7 +191,7 @@ export default function RoomsPage() {
                 </div>
                 <p className="mt-2 text-[11px] font-bold text-ink-mute">
                   {r.status === "MAINTENANCE"
-                    ? "Sedang diperbaiki"
+                    ? "Under maintenance"
                     : `${people.length}/${r.capacity ?? 1} terisi${free ? ` · ${free} kosong` : ""}`}
                 </p>
 
@@ -225,13 +225,13 @@ export default function RoomsPage() {
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title={editTarget ? `Ubah kamar ${editTarget.room_number}` : "Tambah kamar"}
+        title={editTarget ? `Edit room ${editTarget.room_number}` : "Add room"}
       >
         <FormError>{error}</FormError>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Nomor kamar</label>
+              <label className="label">Room number</label>
               <input
                 required
                 value={form.room_number}
@@ -241,7 +241,7 @@ export default function RoomsPage() {
               />
             </div>
             <div>
-              <label className="label">Bangsal</label>
+              <label className="label">Ward</label>
               <input
                 value={form.ward_name}
                 onChange={(e) => setForm({ ...form, ward_name: e.target.value })}
@@ -253,7 +253,7 @@ export default function RoomsPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Kapasitas (tempat tidur)</label>
+              <label className="label">Capacity (beds)</label>
               <input
                 type="number"
                 min={1}
@@ -282,10 +282,10 @@ export default function RoomsPage() {
 
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={busy} className="btn-primary">
-              {busy ? "Menyimpan…" : "Simpan"}
+              {busy ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>

@@ -117,7 +117,7 @@ export function StaffManager({
       body: JSON.stringify(payload),
     });
     setBusy(false);
-    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setError((await res.json()).error ?? "Couldn't save");
     setEditTarget(null);
     load();
   }
@@ -148,7 +148,7 @@ export function StaffManager({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus data staf ini?")) return;
+    if (!confirm("Delete this staff member?")) return;
     await fetch(`${endpoint}/${id}`, { method: "DELETE" });
     load();
   }
@@ -158,10 +158,10 @@ export function StaffManager({
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Tim"
+        eyebrow="Team"
         title={title}
         description={
-          loading ? "Memuat…" : `${staff.length} terdaftar · ${withAccounts} punya akses login`
+          loading ? "Loading…" : `${staff.length} terdaftar · ${withAccounts} punya akses login`
         }
         action={
           <button
@@ -185,7 +185,7 @@ export function StaffManager({
         <div className="card">
           <EmptyState
             icon={Icon}
-            title={`Belum ada ${isDoctor ? "dokter" : "perawat"}`}
+            title={`No ${isDoctor ? "doctors" : "nurses"} yet`}
             hint={description}
             action={
               <button onClick={() => setShowCreate(true)} className="btn-primary">
@@ -209,7 +209,7 @@ export function StaffManager({
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-sm font-extrabold text-ink">{m.full_name}</h2>
                   {isDoctor && (
-                    <p className="truncate text-xs text-ink-soft">{m.specialization ?? "Dokter umum"}</p>
+                    <p className="truncate text-xs text-ink-soft">{m.specialization ?? "General practitioner"}</p>
                   )}
                   <p className="tabular mt-1 text-[11px] font-semibold text-ink-mute">{m.employee_code}</p>
                 </div>
@@ -226,14 +226,14 @@ export function StaffManager({
                       });
                       setError("");
                     }}
-                    title="Ubah"
+                    title="Edit"
                     className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(m.id)}
-                    title="Hapus"
+                    title="Delete"
                     className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -247,7 +247,7 @@ export function StaffManager({
                 {m.profile_id ? (
                   <>
                     <span className="chip bg-brand-50 text-brand-700">
-                      <ShieldCheck className="h-3 w-3" /> Bisa login
+                      <ShieldCheck className="h-3 w-3" /> Has login
                     </span>
                     <button
                       onClick={() => handleRevoke(m)}
@@ -259,7 +259,7 @@ export function StaffManager({
                 ) : (
                   <>
                     <span className="chip bg-canvas text-ink-mute">
-                      <ShieldOff className="h-3 w-3" /> Tanpa akun
+                      <ShieldOff className="h-3 w-3" /> No account
                     </span>
                     <button
                       onClick={() => {
@@ -269,7 +269,7 @@ export function StaffManager({
                       }}
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-600 transition hover:text-brand-700"
                     >
-                      <KeyRound className="h-3 w-3" /> Buatkan akun
+                      <KeyRound className="h-3 w-3" /> Create login
                     </button>
                   </>
                 )}
@@ -284,13 +284,13 @@ export function StaffManager({
         open={showCreate}
         onClose={() => setShowCreate(false)}
         title={addLabel}
-        description="Data staf dan akun loginnya dibuat sekaligus dan saling terhubung."
+        description="Staff records and their logins are created together and stay linked."
       >
         <FormError>{error}</FormError>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Nama lengkap</label>
+              <label className="label">Full name</label>
               <input
                 required
                 value={form.full_name}
@@ -300,7 +300,7 @@ export function StaffManager({
               />
             </div>
             <div>
-              <label className="label">Kode pegawai</label>
+              <label className="label">Employee code</label>
               <input
                 required
                 value={form.employee_code}
@@ -319,7 +319,7 @@ export function StaffManager({
                   value={form.specialization}
                   onChange={(e) => setForm({ ...form, specialization: e.target.value })}
                   className="field"
-                  placeholder="Penyakit Dalam"
+                  placeholder="Internal Medicine"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -351,11 +351,11 @@ export function StaffManager({
               className="mt-0.5 h-4 w-4 accent-brand-500"
             />
             <span>
-              <span className="block text-sm font-semibold text-ink">Buatkan akun login</span>
+              <span className="block text-sm font-semibold text-ink">Create a login</span>
               <span className="block text-xs text-ink-mute">
                 {isDoctor
-                  ? "Diperlukan agar dokter bisa membuka portalnya."
-                  : "Diperlukan agar perawat bisa menerima permintaan pasien."}
+                  ? "Required for the doctor to open their portal."
+                  : "Required for the nurse to receive patient requests."}
               </span>
             </span>
           </label>
@@ -370,11 +370,11 @@ export function StaffManager({
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="field"
-                  placeholder="nama@rumahsakit.id"
+                  placeholder="name@hospital.com"
                 />
               </div>
               <div>
-                <label className="label">Kata sandi</label>
+                <label className="label">Password</label>
                 <input
                   type="password"
                   required
@@ -389,22 +389,22 @@ export function StaffManager({
 
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setShowCreate(false)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={busy} className="btn-primary">
-              {busy ? "Menyimpan…" : "Simpan"}
+              {busy ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* ── Edit ── */}
-      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Ubah data staf">
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Edit staff">
         <FormError>{error}</FormError>
         <form onSubmit={handleEdit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Nama lengkap</label>
+              <label className="label">Full name</label>
               <input
                 required
                 value={editForm.full_name}
@@ -413,7 +413,7 @@ export function StaffManager({
               />
             </div>
             <div>
-              <label className="label">Kode pegawai</label>
+              <label className="label">Employee code</label>
               <input
                 required
                 value={editForm.employee_code}
@@ -454,10 +454,10 @@ export function StaffManager({
           )}
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setEditTarget(null)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={busy} className="btn-primary">
-              {busy ? "Menyimpan…" : "Simpan"}
+              {busy ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>
@@ -467,7 +467,7 @@ export function StaffManager({
       <Modal
         open={!!accountTarget}
         onClose={() => setAccountTarget(null)}
-        title="Buatkan akun login"
+        title="Create a login"
         description={accountTarget?.full_name}
       >
         <FormError>{error}</FormError>
@@ -480,11 +480,11 @@ export function StaffManager({
               value={accountForm.email}
               onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
               className="field"
-              placeholder="nama@rumahsakit.id"
+              placeholder="name@hospital.com"
             />
           </div>
           <div>
-            <label className="label">Kata sandi</label>
+            <label className="label">Password</label>
             <input
               type="password"
               required
@@ -496,10 +496,10 @@ export function StaffManager({
           </div>
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setAccountTarget(null)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={busy} className="btn-primary">
-              {busy ? "Membuat…" : "Buat akun"}
+              {busy ? "Membuat…" : "Create account"}
             </button>
           </div>
         </form>

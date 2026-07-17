@@ -27,7 +27,7 @@ export function GameStage({ path }: { path: string }) {
       <div className="grid min-h-0 flex-1 place-items-center text-center">
         <div>
           <Gamepad2 className="mx-auto mb-3 h-12 w-12 text-brand-200" strokeWidth={1.5} />
-          <p className="text-xl font-bold text-ink-mute">Permainan ini belum tersedia.</p>
+          <p className="text-xl font-bold text-ink-mute">This game isn’t available yet.</p>
         </div>
       </div>
     );

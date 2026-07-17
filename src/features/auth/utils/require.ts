@@ -23,7 +23,7 @@ export async function getCaller(): Promise<Caller | Denied> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Sesi Anda sudah berakhir. Silakan masuk lagi.", status: 401 };
+  if (!user) return { error: "Your session has ended. Please sign in again.", status: 401 };
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -32,7 +32,7 @@ export async function getCaller(): Promise<Caller | Denied> {
     .single();
 
   if (!profile?.role) {
-    return { error: "Akun Anda belum punya peran. Hubungi admin rumah sakit.", status: 401 };
+    return { error: "Your account has no role yet. Contact your hospital admin.", status: 401 };
   }
 
   return {
@@ -48,10 +48,10 @@ export async function requireRole(...roles: Role[]): Promise<Caller | Denied> {
   if (denied(caller)) return caller;
 
   if (!roles.includes(caller.role)) {
-    return { error: "Anda tidak punya akses untuk tindakan ini.", status: 403 };
+    return { error: "You don't have access to do that.", status: 403 };
   }
   if (!caller.hospitalId) {
-    return { error: "Akun Anda tidak terhubung ke rumah sakit mana pun.", status: 403 };
+    return { error: "Your account isn't linked to any hospital.", status: 403 };
   }
   return caller;
 }

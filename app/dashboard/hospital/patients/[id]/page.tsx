@@ -149,10 +149,10 @@ function SaveBar({
       ) : (
         <>
           <button onClick={onReset} className="btn-ghost px-3 py-2 text-xs">
-            Batal
+            Cancel
           </button>
           <button onClick={onSave} disabled={saving} className="btn-primary px-4 py-2 text-xs">
-            {saving ? "Menyimpan…" : "Simpan perubahan"}
+            {saving ? "Menyimpan…" : "Save changes"}
           </button>
         </>
       )}
@@ -425,7 +425,7 @@ export default function PatientDetailPage() {
       body: JSON.stringify({ admission_id: activeAdmission.id, ...vitalsForm }),
     });
     setBusy(null);
-    if (!res.ok) return setModalError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setModalError((await res.json()).error ?? "Couldn't save");
     setShowVitals(false);
     setVitalsForm(EMPTY_VITALS);
     loadExtras(activeAdmission.id);
@@ -448,7 +448,7 @@ export default function PatientDetailPage() {
           body: JSON.stringify({ admission_id: activeAdmission.id, ...recordForm }),
         });
     setBusy(null);
-    if (!res.ok) return setModalError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setModalError((await res.json()).error ?? "Couldn't save");
     setShowRecord(false);
     setRecordTarget(null);
     setRecordForm(EMPTY_RECORD);
@@ -456,16 +456,16 @@ export default function PatientDetailPage() {
   }
 
   async function deleteRecord(recordId: string) {
-    if (!confirm("Hapus catatan ini?") || !activeAdmission) return;
+    if (!confirm("Delete this note?") || !activeAdmission) return;
     await fetch(`/api/medical-records/${recordId}`, { method: "DELETE" });
     loadExtras(activeAdmission.id);
   }
 
-  if (loading) return <PageShell><Loading label="Memuat rekam pasien…" /></PageShell>;
+  if (loading) return <PageShell><Loading label="Loading records…" /></PageShell>;
   if (!patient)
     return (
       <PageShell>
-        <p className="text-sm font-semibold text-red-600">Pasien tidak ditemukan.</p>
+        <p className="text-sm font-semibold text-red-600">Patient not found.</p>
       </PageShell>
     );
 
@@ -480,7 +480,7 @@ export default function PatientDetailPage() {
         href="/dashboard/hospital/patients"
         className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-ink-soft transition hover:text-brand-600"
       >
-        <ChevronLeft className="h-4 w-4" /> Semua pasien
+        <ChevronLeft className="h-4 w-4" /> All patients
       </Link>
 
       {/* Identity header */}
@@ -498,7 +498,7 @@ export default function PatientDetailPage() {
             <div className="mt-2 flex flex-wrap gap-2">
               {st && <span className={cn("chip", st.chip)}>{st.label}</span>}
               {activeAdmission?.rooms?.room_number && (
-                <span className="chip bg-canvas text-ink-soft">Kamar {activeAdmission.rooms.room_number}</span>
+                <span className="chip bg-canvas text-ink-soft">Room {activeAdmission.rooms.room_number}</span>
               )}
             </div>
           </div>
@@ -506,7 +506,7 @@ export default function PatientDetailPage() {
 
         {activeAdmission && (
           <a href={`/patient/${activeAdmission.id}`} target="_blank" rel="noopener noreferrer" className="btn-primary">
-            <MonitorPlay className="h-4 w-4" /> Tampilkan layar pasien
+            <MonitorPlay className="h-4 w-4" /> Show patient screen
           </a>
         )}
       </div>
@@ -516,7 +516,7 @@ export default function PatientDetailPage() {
         <div className="card mb-4 flex items-start gap-3 border-red-200 bg-red-50 p-4">
           <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
           <div>
-            <p className="text-sm font-extrabold text-red-900">Alergi</p>
+            <p className="text-sm font-extrabold text-red-900">Allergies</p>
             <p className="text-sm text-red-800">{patient.allergies}</p>
           </div>
         </div>
@@ -524,11 +524,11 @@ export default function PatientDetailPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {/* ── Identity, editable in place ── */}
-        <Panel title="Identitas pasien">
+        <Panel title="Patient details">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Nama lengkap</label>
+                <label className="label">Full name</label>
                 <input
                   value={idForm.full_name ?? ""}
                   onChange={(e) => setIdForm({ ...idForm, full_name: e.target.value })}
@@ -536,7 +536,7 @@ export default function PatientDetailPage() {
                 />
               </div>
               <div>
-                <label className="label">Tanggal lahir</label>
+                <label className="label">Date of birth</label>
                 <input
                   type="date"
                   value={idForm.dob ?? ""}
@@ -548,25 +548,25 @@ export default function PatientDetailPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Jenis kelamin</label>
+                <label className="label">Gender</label>
                 <select
                   value={idForm.gender ?? ""}
                   onChange={(e) => setIdForm({ ...idForm, gender: e.target.value })}
                   className="field"
                 >
-                  <option value="">Pilih…</option>
-                  <option value="male">Laki-laki</option>
-                  <option value="female">Perempuan</option>
+                  <option value="">Choose…</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
                 </select>
               </div>
               <div>
-                <label className="label">Golongan darah</label>
+                <label className="label">Blood type</label>
                 <select
                   value={idForm.blood_type ?? ""}
                   onChange={(e) => setIdForm({ ...idForm, blood_type: e.target.value })}
                   className="field"
                 >
-                  <option value="">Tidak diketahui</option>
+                  <option value="">Unknown</option>
                   {BLOOD_TYPES.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
@@ -576,7 +576,7 @@ export default function PatientDetailPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Nomor kontak</label>
+                <label className="label">Contact number</label>
                 <input
                   value={idForm.contact_number ?? ""}
                   onChange={(e) => setIdForm({ ...idForm, contact_number: e.target.value })}
@@ -584,7 +584,7 @@ export default function PatientDetailPage() {
                 />
               </div>
               <div>
-                <label className="label">Kontak darurat</label>
+                <label className="label">Emergency contact</label>
                 <input
                   value={idForm.emergency_contact ?? ""}
                   onChange={(e) => setIdForm({ ...idForm, emergency_contact: e.target.value })}
@@ -594,7 +594,7 @@ export default function PatientDetailPage() {
             </div>
 
             <div>
-              <label className="label">Alamat</label>
+              <label className="label">Address</label>
               <input
                 value={idForm.address ?? ""}
                 onChange={(e) => setIdForm({ ...idForm, address: e.target.value })}
@@ -603,13 +603,13 @@ export default function PatientDetailPage() {
             </div>
 
             <div>
-              <label className="label">Alergi</label>
+              <label className="label">Allergies</label>
               <textarea
                 rows={2}
                 value={idForm.allergies ?? ""}
                 onChange={(e) => setIdForm({ ...idForm, allergies: e.target.value })}
                 className="field resize-none"
-                placeholder="mis. Penisilin, seafood — kosongkan bila tidak ada"
+                placeholder="e.g. penicillin, seafood — leave empty if none"
               />
             </div>
           </div>
@@ -624,24 +624,24 @@ export default function PatientDetailPage() {
         </Panel>
 
         {/* ── Admission + room ── */}
-        <Panel title="Rawat inap & kamar">
+        <Panel title="Admissions and rooms">
           {activeAdmission ? (
             <div className="space-y-4">
               <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-canvas p-4 text-sm">
                 <div>
-                  <dt className="text-xs font-semibold text-ink-mute">Kamar</dt>
+                  <dt className="text-xs font-semibold text-ink-mute">Rooms</dt>
                   <dd className="mt-0.5 font-extrabold text-ink">
-                    {activeAdmission.rooms?.room_number ?? "Belum ditentukan"}
+                    {activeAdmission.rooms?.room_number ?? "Not set"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold text-ink-mute">Bangsal</dt>
+                  <dt className="text-xs font-semibold text-ink-mute">Ward</dt>
                   <dd className="mt-0.5 font-extrabold text-ink">{activeAdmission.rooms?.ward_name ?? "—"}</dd>
                 </div>
                 <div className="col-span-2">
-                  <dt className="text-xs font-semibold text-ink-mute">Masuk sejak</dt>
+                  <dt className="text-xs font-semibold text-ink-mute">Admitted since</dt>
                   <dd className="tabular mt-0.5 font-extrabold text-ink">
-                    {new Date(activeAdmission.admission_date).toLocaleString("id-ID", {
+                    {new Date(activeAdmission.admission_date).toLocaleString("en-US", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
@@ -650,10 +650,10 @@ export default function PatientDetailPage() {
               </dl>
 
               <div>
-                <label className="label">Pindah kamar</label>
+                <label className="label">Move room</label>
                 <div className="flex gap-2">
                   <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="field">
-                    <option value="">Pilih kamar tujuan…</option>
+                    <option value="">Choose destination room…</option>
                     {rooms
                       .filter((r) => r.status !== "MAINTENANCE" && r.id !== activeAdmission.room_id)
                       .map((r) => (
@@ -674,7 +674,7 @@ export default function PatientDetailPage() {
                   <p className="mt-1.5 text-xs text-ink-mute">
                     Belum ada kamar.{" "}
                     <Link href="/dashboard/hospital/rooms" className="row-link">
-                      Tambah kamar dulu
+                      Add a room first
                     </Link>
                     .
                   </p>
@@ -682,13 +682,13 @@ export default function PatientDetailPage() {
               </div>
 
               <div className="border-t border-line pt-4">
-                <p className="label">Akhiri perawatan</p>
+                <p className="label">End admission</p>
                 <div className="flex flex-wrap gap-2">
                   {(["DISCHARGED", "TRANSFERRED", "DECEASED"] as const).map((s) => (
                     <button
                       key={s}
                       onClick={() =>
-                        confirm(`Tandai pasien sebagai ${ADMISSION_STATUS[s].label}?`) &&
+                        confirm(`Mark this patient as ${ADMISSION_STATUS[s].label}?`) &&
                         patchAdmission({ status: s }, s)
                       }
                       disabled={busy === s}
@@ -703,11 +703,11 @@ export default function PatientDetailPage() {
           ) : (
             <div>
               <p className="mb-4 text-sm text-ink-soft">
-                Pasien belum dirawat inap. Layar Medly baru bisa dibuka setelah pasien punya admisi aktif.
+                This patient isn’t admitted yet. The Medly screen opens once they have an active admission.
               </p>
               <div className="flex gap-2">
                 <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="field">
-                  <option value="">Pilih kamar (opsional)…</option>
+                  <option value="">Choose a room (optional)…</option>
                   {rooms
                     .filter((r) => r.status !== "MAINTENANCE")
                     .map((r) => (
@@ -717,7 +717,7 @@ export default function PatientDetailPage() {
                     ))}
                 </select>
                 <button onClick={admit} disabled={busy === "admit"} className="btn-primary shrink-0">
-                  {busy === "admit" ? "Memproses…" : "Rawat inap"}
+                  {busy === "admit" ? "Working…" : "Admit"}
                 </button>
               </div>
             </div>
@@ -725,44 +725,44 @@ export default function PatientDetailPage() {
         </Panel>
 
         {/* ── Clinical record of this stay ── */}
-        <Panel title="Rekam medis — data stay ini">
+        <Panel title="Medical records — this stay">
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+            <p className="text-sm text-ink-mute">Available once the patient is admitted.</p>
           ) : (
             <>
               <div className="space-y-4">
                 <div>
-                  <label className="label">Keluhan utama</label>
+                  <label className="label">Chief complaint</label>
                   <textarea
                     rows={2}
                     value={clinForm.chief_complaint ?? ""}
                     onChange={(e) => setClinForm({ ...clinForm, chief_complaint: e.target.value })}
                     className="field resize-none"
-                    placeholder="Apa yang dirasakan pasien saat masuk"
+                    placeholder="What the patient reported on admission"
                   />
                 </div>
                 <div>
-                  <label className="label">Diagnosa utama</label>
+                  <label className="label">Primary diagnosis</label>
                   <input
                     value={clinForm.primary_diagnosis ?? ""}
                     onChange={(e) => setClinForm({ ...clinForm, primary_diagnosis: e.target.value })}
                     className="field"
                     placeholder="mis. Demam Berdarah Dengue"
                   />
-                  <p className="mt-1.5 text-xs text-ink-mute">Tampil di tablet pasien.</p>
+                  <p className="mt-1.5 text-xs text-ink-mute">Shown on patient tablets.</p>
                 </div>
                 <div>
-                  <label className="label">Diagnosa penyerta</label>
+                  <label className="label">Secondary diagnosis</label>
                   <textarea
                     rows={2}
                     value={clinForm.secondary_diagnosis ?? ""}
                     onChange={(e) => setClinForm({ ...clinForm, secondary_diagnosis: e.target.value })}
                     className="field resize-none"
-                    placeholder="Komorbid atau diagnosa sekunder"
+                    placeholder="Comorbidity or secondary diagnosis"
                   />
                 </div>
                 <div>
-                  <label className="label">Rencana perawatan</label>
+                  <label className="label">Care plan</label>
                   <textarea
                     rows={2}
                     value={clinForm.care_plan ?? ""}
@@ -783,16 +783,16 @@ export default function PatientDetailPage() {
         </Panel>
 
         {/* ── Care team ── */}
-        <Panel title="Tim perawatan">
+        <Panel title="Care team">
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+            <p className="text-sm text-ink-mute">Available once the patient is admitted.</p>
           ) : (
             <div className="space-y-5">
               <div>
-                <p className="label">Dokter</p>
+                <p className="label">Doctors</p>
                 {doctorAssign.length === 0 ? (
                   <p className="mb-2 rounded-xl border border-dashed border-line px-3 py-4 text-center text-xs text-ink-mute">
-                    Belum ada dokter ditugaskan.
+                    No doctor assigned yet.
                   </p>
                 ) : (
                   <ul className="mb-2 space-y-1.5">
@@ -819,7 +819,7 @@ export default function PatientDetailPage() {
                 )}
                 <div className="flex gap-2">
                   <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)} className="field">
-                    <option value="">Tugaskan dokter…</option>
+                    <option value="">Assign a doctor…</option>
                     {doctors.filter((d) => !assignedDoctorIds.has(d.id)).map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.full_name}{d.specialization ? ` — ${d.specialization}` : ""}
@@ -833,10 +833,10 @@ export default function PatientDetailPage() {
               </div>
 
               <div className="border-t border-line pt-4">
-                <p className="label">Perawat</p>
+                <p className="label">Nurses</p>
                 {nurseAssign.length === 0 ? (
                   <p className="mb-2 rounded-xl border border-dashed border-line px-3 py-4 text-center text-xs text-ink-mute">
-                    Belum ada perawat penanggung jawab.
+                    No primary nurse assigned yet.
                   </p>
                 ) : (
                   <ul className="mb-2 space-y-1.5">
@@ -863,7 +863,7 @@ export default function PatientDetailPage() {
                 )}
                 <div className="flex gap-2">
                   <select value={selectedNurse} onChange={(e) => setSelectedNurse(e.target.value)} className="field">
-                    <option value="">Tugaskan perawat…</option>
+                    <option value="">Assign a nurse…</option>
                     {nurses.filter((n) => !assignedNurseIds.has(n.id)).map((n) => (
                       <option key={n.id} value={n.id}>{n.full_name}</option>
                     ))}
@@ -878,13 +878,12 @@ export default function PatientDetailPage() {
                   </button>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-ink-mute">
-                  Penugasan ini untuk penanggung jawab. Panggilan pasien tetap masuk ke antrean semua
-                  perawat agar tidak tertahan di satu shift.
+                  This assignment records accountability. Patient calls still go to the whole ward queue, so nothing is stuck behind one nurse’s shift.
                 </p>
                 {nurses.length === 0 && (
                   <p className="mt-1.5 text-xs text-ink-mute">
                     Belum ada perawat.{" "}
-                    <Link href="/dashboard/hospital/nurses" className="row-link">Tambah perawat</Link>.
+                    <Link href="/dashboard/hospital/nurses" className="row-link">Add nurse</Link>.
                   </p>
                 )}
               </div>
@@ -904,10 +903,10 @@ export default function PatientDetailPage() {
           }
         >
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+            <p className="text-sm text-ink-mute">Available once the patient is admitted.</p>
           ) : !latest ? (
             <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-mute">
-              Belum ada pengukuran. Yang dicatat di sini tampil di tablet pasien.
+              No measurements yet. Whatever you record here appears on the patient’s tablet.
             </p>
           ) : (
             <div>
@@ -931,7 +930,7 @@ export default function PatientDetailPage() {
                 ))}
               </div>
               <p className="tabular mt-3 text-xs text-ink-mute">
-                Terakhir {new Date(latest.measured_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                Terakhir {new Date(latest.measured_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                 {vitals.length > 1 ? ` · ${vitals.length} catatan` : ""}
               </p>
             </div>
@@ -939,33 +938,33 @@ export default function PatientDetailPage() {
         </Panel>
 
         {/* ── Recovery ── */}
-        <Panel title="Progres pemulihan">
+        <Panel title="Recovery progress">
           {!activeAdmission ? (
-            <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+            <p className="text-sm text-ink-mute">Available once the patient is admitted.</p>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-[80px_110px_1fr] gap-3">
                 <div>
-                  <label className="label">Hari ke-</label>
+                  <label className="label">Day </label>
                   <input type="number" min={1} value={currentDay} onChange={(e) => setCurrentDay(e.target.value)} className="field" />
                 </div>
                 <div>
-                  <label className="label">Estimasi</label>
-                  <input type="number" min={1} value={estimatedDays} onChange={(e) => setEstimatedDays(e.target.value)} className="field" placeholder="hari" />
+                  <label className="label">Estimate</label>
+                  <input type="number" min={1} value={estimatedDays} onChange={(e) => setEstimatedDays(e.target.value)} className="field" placeholder="days" />
                 </div>
                 <div>
-                  <label className="label">Catatan untuk pasien</label>
+                  <label className="label">Note for the patient</label>
                   <input value={recoveryNotes} onChange={(e) => setRecoveryNotes(e.target.value)} className="field" placeholder="mis. Kondisi membaik" />
                 </div>
               </div>
 
               <button onClick={saveRecovery} disabled={busy === "recovery"} className="btn-primary w-full">
-                {flag === "recovery" ? (<><Check className="h-4 w-4" /> Tersimpan</>) : recovery ? "Perbarui progres" : "Mulai tracking pemulihan"}
+                {flag === "recovery" ? (<><Check className="h-4 w-4" /> Tersimpan</>) : recovery ? "Perbarui progres" : "Start recovery tracking"}
               </button>
 
               {recovery && (
                 <div className="border-t border-line pt-4">
-                  <p className="label">Target aktivitas</p>
+                  <p className="label">Activity goals</p>
                   <ul className="mb-3 space-y-1.5">
                     {(recovery.recovery_checklist_items ?? []).map((item) => (
                       <li key={item.id}>
@@ -978,7 +977,7 @@ export default function PatientDetailPage() {
                       </li>
                     ))}
                     {(recovery.recovery_checklist_items ?? []).length === 0 && (
-                      <li className="px-2 text-sm text-ink-mute">Belum ada target.</li>
+                      <li className="px-2 text-sm text-ink-mute">No goals yet.</li>
                     )}
                   </ul>
                   <div className="flex gap-2">
@@ -987,7 +986,7 @@ export default function PatientDetailPage() {
                       onChange={(e) => setNewTask(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTask())}
                       className="field"
-                      placeholder="Tambah target aktivitas…"
+                      placeholder="Add an activity goal…"
                     />
                     <button onClick={addTask} disabled={!newTask.trim()} className="btn-ghost shrink-0">
                       <Plus className="h-4 w-4" />
@@ -1002,7 +1001,7 @@ export default function PatientDetailPage() {
 
       {/* ── Clinical notes timeline ── */}
       <Panel
-        title="Catatan klinis"
+        title="Clinical notes"
         className="mt-4"
         action={
           activeAdmission && (
@@ -1010,16 +1009,16 @@ export default function PatientDetailPage() {
               onClick={() => { setRecordTarget(null); setRecordForm(EMPTY_RECORD); setModalError(""); setShowRecord(true); }}
               className="btn-ghost px-3 py-1.5 text-xs"
             >
-              <Plus className="h-3.5 w-3.5" /> Tambah catatan
+              <Plus className="h-3.5 w-3.5" /> Add note
             </button>
           )
         }
       >
         {!activeAdmission ? (
-          <p className="text-sm text-ink-mute">Tersedia setelah pasien dirawat inap.</p>
+          <p className="text-sm text-ink-mute">Available once the patient is admitted.</p>
         ) : records.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink-mute">
-            Belum ada catatan klinis untuk masa rawat ini.
+            No clinical notes for this stay yet.
           </p>
         ) : (
           <ol className="relative space-y-4 border-l border-line pl-5">
@@ -1033,7 +1032,7 @@ export default function PatientDetailPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn("chip", t.tone.soft)}>{t.label}</span>
                         <span className="tabular text-xs font-semibold text-ink-mute">
-                          {new Date(r.recorded_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                          {new Date(r.recorded_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                         </span>
                         {r.author_name && <span className="text-xs text-ink-mute">· {r.author_name}</span>}
                       </div>
@@ -1068,7 +1067,7 @@ export default function PatientDetailPage() {
       </Panel>
 
       {/* ── Modals ── */}
-      <Modal open={showVitals} onClose={() => setShowVitals(false)} title="Catat vital sign" description="Kosongkan kolom yang tidak diukur.">
+      <Modal open={showVitals} onClose={() => setShowVitals(false)} title="Record vitals" description="Leave blank anything you didn't measure.">
         <FormError>{modalError}</FormError>
         <form onSubmit={saveVitals} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -1077,7 +1076,7 @@ export default function PatientDetailPage() {
               { k: "blood_pressure_diastolic", l: "Diastolik (mmHg)", p: "80" },
               { k: "heart_rate", l: "Nadi (bpm)", p: "80" },
               { k: "temperature_celsius", l: "Suhu (°C)", p: "36.8", step: "0.1" },
-              { k: "respiratory_rate", l: "Napas (/menit)", p: "18" },
+              { k: "respiratory_rate", l: "Resp. rate (/min)", p: "18" },
               { k: "oxygen_saturation", l: "SpO₂ (%)", p: "98" },
             ].map((f) => (
               <div key={f.k}>
@@ -1094,9 +1093,9 @@ export default function PatientDetailPage() {
             ))}
           </div>
           <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={() => setShowVitals(false)} className="btn-ghost">Batal</button>
+            <button type="button" onClick={() => setShowVitals(false)} className="btn-ghost">Cancel</button>
             <button type="submit" disabled={busy === "vitals"} className="btn-primary">
-              <Activity className="h-4 w-4" /> {busy === "vitals" ? "Menyimpan…" : "Simpan"}
+              <Activity className="h-4 w-4" /> {busy === "vitals" ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>
@@ -1105,13 +1104,13 @@ export default function PatientDetailPage() {
       <Modal
         open={showRecord}
         onClose={() => setShowRecord(false)}
-        title={recordTarget ? "Ubah catatan klinis" : "Tambah catatan klinis"}
+        title={recordTarget ? "Edit clinical note" : "Add clinical note"}
         width="max-w-lg"
       >
         <FormError>{modalError}</FormError>
         <form onSubmit={saveRecord} className="space-y-4">
           <div>
-            <span className="label">Jenis catatan</span>
+            <span className="label">Note type</span>
             <div className="grid grid-cols-3 gap-2">
               {Object.entries(MEDICAL_RECORD_TYPES).map(([k, t]) => (
                 <button
@@ -1132,35 +1131,35 @@ export default function PatientDetailPage() {
             </div>
           </div>
           <div>
-            <label className="label">Judul</label>
+            <label className="label">Title</label>
             <input
               required
               value={recordForm.title}
               onChange={(e) => setRecordForm({ ...recordForm, title: e.target.value })}
               className="field"
-              placeholder="mis. Visit pagi — kondisi membaik"
+              placeholder="e.g. Morning round — condition improving"
             />
           </div>
           <div>
-            <label className="label">Isi catatan</label>
+            <label className="label">Note body</label>
             <textarea
               rows={6}
               value={recordForm.content}
               onChange={(e) => setRecordForm({ ...recordForm, content: e.target.value })}
               className="field resize-none"
-              placeholder="Temuan, tindakan, dan rencana berikutnya…"
+              placeholder="Findings, actions and what comes next…"
             />
           </div>
           <div className="flex items-center gap-2 rounded-xl bg-canvas px-3 py-2.5">
             <FileText className="h-4 w-4 shrink-0 text-ink-mute" />
             <p className="text-xs text-ink-mute">
-              Catatan ini internal rumah sakit — tidak ditampilkan di tablet pasien.
+              These notes are internal — they never appear on the patient’s tablet.
             </p>
           </div>
           <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={() => setShowRecord(false)} className="btn-ghost">Batal</button>
+            <button type="button" onClick={() => setShowRecord(false)} className="btn-ghost">Cancel</button>
             <button type="submit" disabled={busy === "record"} className="btn-primary">
-              {busy === "record" ? "Menyimpan…" : "Simpan catatan"}
+              {busy === "record" ? "Menyimpan…" : "Save note"}
             </button>
           </div>
         </form>

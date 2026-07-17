@@ -9,12 +9,12 @@ export default function UnauthorizedPage() {
           <LogIn className="h-5 w-5" strokeWidth={2.1} />
         </span>
         <p className="eyebrow">Error 401</p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">Sesi Anda sudah berakhir</h1>
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">Your session has ended</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          Masuk kembali untuk melanjutkan ke dashboard Medly.
+          Sign in again to continue to your Medly dashboard.
         </p>
         <Link href="/login" className="btn-primary mt-6 w-full">
-          Masuk
+          Sign in
         </Link>
       </div>
     </div>

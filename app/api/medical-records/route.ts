@@ -41,10 +41,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body.admission_id || !body.title?.trim()) {
-      return NextResponse.json({ error: "Judul catatan wajib diisi" }, { status: 422 });
+      return NextResponse.json({ error: "A note title is required" }, { status: 422 });
     }
     if (!TYPES.includes(body.record_type)) {
-      return NextResponse.json({ error: "Jenis catatan tidak valid" }, { status: 422 });
+      return NextResponse.json({ error: "That note type isn't valid" }, { status: 422 });
     }
 
     const {

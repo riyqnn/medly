@@ -27,25 +27,25 @@ import { cn } from "@/src/lib/utils";
 type Item = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
 const CARE: Item[] = [
-  { href: "/dashboard/hospital", label: "Ringkasan", icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/hospital/patients", label: "Pasien", icon: Users },
-  { href: "/dashboard/hospital/rooms", label: "Kamar", icon: BedDouble },
-  { href: "/dashboard/hospital/treatments", label: "Jadwal Perawatan", icon: CalendarDays },
-  { href: "/dashboard/hospital/requests", label: "Permintaan Perawat", icon: BellRing },
+  { href: "/dashboard/hospital", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/hospital/patients", label: "Patients", icon: Users },
+  { href: "/dashboard/hospital/rooms", label: "Rooms", icon: BedDouble },
+  { href: "/dashboard/hospital/treatments", label: "Treatment Schedule", icon: CalendarDays },
+  { href: "/dashboard/hospital/requests", label: "Nurse Requests", icon: BellRing },
 ];
 
 const TEAM: Item[] = [
-  { href: "/dashboard/hospital/doctors", label: "Dokter", icon: Stethoscope },
-  { href: "/dashboard/hospital/nurses", label: "Perawat", icon: HeartPulse },
-  { href: "/dashboard/hospital/staff", label: "Akun Staf", icon: IdCard },
+  { href: "/dashboard/hospital/doctors", label: "Doctors", icon: Stethoscope },
+  { href: "/dashboard/hospital/nurses", label: "Nurses", icon: HeartPulse },
+  { href: "/dashboard/hospital/staff", label: "Staff Accounts", icon: IdCard },
 ];
 
 const SERVICES: Item[] = [
-  { href: "/dashboard/hospital/meals", label: "Menu Makanan", icon: UtensilsCrossed },
-  { href: "/dashboard/hospital/meal-orders", label: "Pesanan Makanan", icon: ClipboardList },
-  { href: "/dashboard/hospital/education", label: "Edukasi", icon: GraduationCap },
-  { href: "/dashboard/hospital/entertainment", label: "Hiburan", icon: Clapperboard },
-  { href: "/dashboard/hospital/spiritual", label: "Kerohanian", icon: Sparkles },
+  { href: "/dashboard/hospital/meals", label: "Meal Menus", icon: UtensilsCrossed },
+  { href: "/dashboard/hospital/meal-orders", label: "Meal Orders", icon: ClipboardList },
+  { href: "/dashboard/hospital/education", label: "Education", icon: GraduationCap },
+  { href: "/dashboard/hospital/entertainment", label: "Entertainment", icon: Clapperboard },
+  { href: "/dashboard/hospital/spiritual", label: "Spiritual", icon: Sparkles },
 ];
 
 function NavLink({ item, badge }: { item: Item; badge?: number }) {
@@ -105,7 +105,7 @@ function Group({ title, items, badges }: { title: string; items: Item[]; badges?
 
 const SETTINGS: Item = {
   href: "/dashboard/hospital/settings",
-  label: "Pengaturan",
+  label: "Settings",
   icon: Settings,
 };
 
@@ -141,17 +141,17 @@ export function HospitalSidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-line bg-white">
       <div className="px-5 py-6">
-        <HospitalLockup name={hospitalName} logoUrl={logoUrl} subtitle="Dashboard rumah sakit" />
+        <HospitalLockup name={hospitalName} logoUrl={logoUrl} subtitle="Hospital dashboard" />
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
         <Group
-          title="Perawatan"
+          title="Care"
           items={CARE}
           badges={{ "/dashboard/hospital/requests": openRequests }}
         />
-        <Group title="Tim" items={TEAM} />
-        <Group title="Layanan Pasien" items={SERVICES} />
+        <Group title="Team" items={TEAM} />
+        <Group title="Patient Services" items={SERVICES} />
       </nav>
 
       <div className="border-t border-line p-3">
@@ -165,7 +165,7 @@ export function HospitalSidebar({
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-ink">{userName}</p>
-            <p className="text-[11px] font-medium text-ink-mute">Admin rumah sakit</p>
+            <p className="text-[11px] font-medium text-ink-mute">Hospital admin</p>
           </div>
         </div>
         <LogoutButton />

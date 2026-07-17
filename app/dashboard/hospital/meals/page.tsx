@@ -115,7 +115,7 @@ export default function MealsPage() {
           body: JSON.stringify(form),
         });
     setSaving(false);
-    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setError((await res.json()).error ?? "Couldn't save");
     setShowModal(false);
     loadAll();
   }
@@ -130,7 +130,7 @@ export default function MealsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus menu ini?")) return;
+    if (!confirm("Delete this menu?")) return;
     await fetch(`/api/meals/${id}`, { method: "DELETE" });
     loadAll();
   }
@@ -138,12 +138,12 @@ export default function MealsPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Layanan pasien"
-        title="Menu Makanan"
-        description="Menu yang tersedia muncul di tablet pasien sesuai sesi makannya."
+        eyebrow="Patient services"
+        title="Meal Menus"
+        description="Available menus appear on the patient's tablet for the matching meal."
         action={
           <button onClick={openAdd} className="btn-primary">
-            <Plus className="h-4 w-4" /> Tambah menu
+            <Plus className="h-4 w-4" /> Add menu
           </button>
         }
       />
@@ -156,11 +156,11 @@ export default function MealsPage() {
         <div className="card">
           <EmptyState
             icon={UtensilsCrossed}
-            title="Belum ada menu"
-            hint="Tambahkan menu agar pasien bisa memesan makanan dari tabletnya."
+            title="No menus yet"
+            hint="Add a menu so patients can order meals from their tablet."
             action={
               <button onClick={openAdd} className="btn-primary">
-                <Plus className="h-4 w-4" /> Tambah menu
+                <Plus className="h-4 w-4" /> Add menu
               </button>
             }
           />
@@ -184,13 +184,13 @@ export default function MealsPage() {
                 )}
                 <button
                   onClick={() => toggleAvailability(m)}
-                  title={m.is_available ? "Tersedia — klik untuk sembunyikan" : "Disembunyikan — klik untuk tampilkan"}
+                  title={m.is_available ? "Available — click to hide" : "Hidden — click to show"}
                   className={cn(
                     "absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-extrabold shadow-sm transition",
                     m.is_available ? "bg-brand-500 text-white" : "bg-white text-ink-mute"
                   )}
                 >
-                  {m.is_available ? "Tersedia" : "Disembunyikan"}
+                  {m.is_available ? "Available" : "Disembunyikan"}
                 </button>
               </div>
 
@@ -215,11 +215,11 @@ export default function MealsPage() {
 
                 <div className="mt-auto flex gap-2 pt-4">
                   <button onClick={() => openEdit(m)} className="btn-ghost flex-1 px-3 py-2 text-xs">
-                    <Pencil className="h-3.5 w-3.5" /> Ubah
+                    <Pencil className="h-3.5 w-3.5" /> Edit
                   </button>
                   <button
                     onClick={() => handleDelete(m.id)}
-                    title="Hapus"
+                    title="Delete"
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line text-ink-mute transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -245,11 +245,11 @@ export default function MealsPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editTarget ? "Ubah menu" : "Tambah menu"}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editTarget ? "Edit menu" : "Add menu"}>
         <FormError>{error}</FormError>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Nama menu</label>
+            <label className="label">Menu name</label>
             <input
               required
               value={form.name}
@@ -261,7 +261,7 @@ export default function MealsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Harga (Rp)</label>
+              <label className="label">Price (Rp)</label>
               <input
                 type="number"
                 min={0}
@@ -270,16 +270,16 @@ export default function MealsPage() {
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
                 className="field"
               />
-              <p className="mt-1.5 text-xs text-ink-mute">Isi 0 jika termasuk paket perawatan.</p>
+              <p className="mt-1.5 text-xs text-ink-mute">Enter 0 if it is included in the care package.</p>
             </div>
             <div>
-              <label className="label">Kategori</label>
+              <label className="label">Category</label>
               <select
                 value={form.category_id}
                 onChange={(e) => setForm({ ...form, category_id: e.target.value })}
                 className="field"
               >
-                <option value="">Tanpa kategori</option>
+                <option value="">No category</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -290,7 +290,7 @@ export default function MealsPage() {
           </div>
 
           <div>
-            <label className="label">Deskripsi</label>
+            <label className="label">Description</label>
             <textarea
               rows={2}
               value={form.description}
@@ -300,7 +300,7 @@ export default function MealsPage() {
           </div>
 
           <div>
-            <label className="label">Gambar Makanan</label>
+            <label className="label">Meal photo</label>
             <input
               type="file"
               accept="image/*"
@@ -318,10 +318,10 @@ export default function MealsPage() {
                     setForm({ ...form, image_url: data.url });
                   } else {
                     const err = await res.json();
-                    setError(err.error || "Gagal mengunggah gambar");
+                    setError(err.error || "Couldn't upload the image");
                   }
                 } catch (err: any) {
-                  setError(err.message || "Gagal mengunggah gambar");
+                  setError(err.message || "Couldn't upload the image");
                 } finally {
                   setUploading(false);
                 }
@@ -341,7 +341,7 @@ export default function MealsPage() {
           </div>
 
           <div>
-            <span className="label">Tersedia pada sesi</span>
+            <span className="label">Available at</span>
             <div className="flex gap-2">
               {MEAL_SCHEDULES.map((s) => (
                 <button
@@ -360,7 +360,7 @@ export default function MealsPage() {
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 text-xs text-ink-mute">Kosongkan agar tampil di semua sesi.</p>
+            <p className="mt-1.5 text-xs text-ink-mute">Leave empty to show in every meal session.</p>
           </div>
 
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-line p-3">
@@ -370,15 +370,15 @@ export default function MealsPage() {
               onChange={(e) => setForm({ ...form, is_available: e.target.checked })}
               className="h-4 w-4 accent-brand-500"
             />
-            <span className="text-sm font-semibold text-ink">Tampilkan di tablet pasien</span>
+            <span className="text-sm font-semibold text-ink">Show on patient tablets</span>
           </label>
 
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={saving || uploading} className="btn-primary">
-              {saving ? "Menyimpan…" : "Simpan"}
+              {saving ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>

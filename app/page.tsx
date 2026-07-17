@@ -79,67 +79,67 @@ const HOSPITALS = [
 ];
 
 const PROBLEMS = [
-  { n: "01", title: "Sulit memanggil perawat", body: "Menekan bel lalu menunggu tanpa tahu apakah panggilan diterima atau kapan bantuan tiba." },
-  { n: "02", title: "Informasi rumah sakit kabur", body: "Bingung soal dokter penanggung jawab, jam kunjung, tata tertib, dan alur perawatan." },
-  { n: "03", title: "Jadwal mudah terlewat", body: "Jadwal obat, visit dokter, dan terapi tersebar sehingga sulit dipantau pasien." },
-  { n: "04", title: "Pesan makanan merepotkan", body: "Memilih menu diet harus menunggu petugas, tanpa kejelasan status pesanan." },
+  { n: "01", title: "Calling a nurse is hard", body: "Pressing a bell, then waiting with no idea whether anyone heard or when help arrives." },
+  { n: "02", title: "Hospital information is vague", body: "Confusion about who the attending doctor is, visiting hours, house rules, and what happens next." },
+  { n: "03", title: "Schedules slip by unnoticed", body: "Medication, doctor visits and therapy live in different places, so patients can't follow them." },
+  { n: "04", title: "Ordering meals is a hassle", body: "Choosing a diet menu means waiting for staff, with no idea where the order stands." },
 ];
 
 const SOLUTIONS = [
-  { icon: BellRing, title: "Nurse Call transparan", body: "Pilih kebutuhan spesifik dan lihat statusnya diterima secara langsung." },
-  { icon: CalendarDays, title: "Jadwal terpusat", body: "Obat, visit, dan terapi dalam satu linimasa lengkap dengan pengingat." },
-  { icon: UtensilsCrossed, title: "Pesan makanan mandiri", body: "Menu diet harian dengan status pesanan yang bisa dipantau pasien." },
-  { icon: Building2, title: "Info rumah sakit jelas", body: "Profil dokter, tata tertib, dan panduan rawat inap selalu tersedia." },
+  { icon: BellRing, title: "Nurse Call transparan", body: "Pick exactly what's needed and watch it get picked up, live." },
+  { icon: CalendarDays, title: "Schedules in one place", body: "Medication, visits and therapy on one timeline, with reminders." },
+  { icon: UtensilsCrossed, title: "Order meals independently", body: "Daily diet menus with order status the patient can follow." },
+  { icon: Building2, title: "Hospital info made clear", body: "Doctor profiles, house rules and inpatient guidance, always at hand." },
 ];
 
 const STATS = [
   { value: 20, suffix: "+", label: "Fitur terintegrasi" },
-  { value: null, display: "24/7", label: "Selalu tersedia" },
-  { value: 100, suffix: "%", label: "Ramah pasien" },
+  { value: null, display: "24/7", label: "Always available" },
+  { value: 100, suffix: "%", label: "Patient-friendly" },
   { value: 8, suffix: "", label: "Layanan inti" },
 ];
 
 const FEATURES = [
-  { icon: BellRing, tag: "Bantuan", title: "Nurse Call", body: "Panggil bantuan dengan kebutuhan yang jelas, langsung masuk antrean perawat.", image: IMG.care, span: "lg:col-span-2 lg:row-span-2" },
-  { icon: UtensilsCrossed, tag: "Dapur", title: "Meal Ordering", body: "Pilih menu sesuai diet lalu pantau status makanan.", image: IMG.food, span: "" },
-  { icon: Pill, tag: "Medis", title: "Jadwal Obat", body: "Pengingat dosis dan waktu minum obat.", image: IMG.pills, span: "" },
-  { icon: Clapperboard, tag: "Hiburan", title: "Entertainment", body: "Film, musik, dan podcast untuk mengisi waktu.", image: IMG.media, span: "" },
-  { icon: Building2, tag: "Info", title: "Hospital Information", body: "Profil dokter, tata tertib, dan panduan rawat inap.", image: IMG.reception, span: "" },
-  { icon: GraduationCap, tag: "Edukasi", title: "Health Education", body: "Artikel dan video yang dikurasi sesuai kondisi pasien.", image: IMG.books, span: "lg:col-span-2" },
-  { icon: MessageSquare, tag: "Suara pasien", title: "Feedback", body: "Sampaikan penilaian layanan langsung dari tempat tidur.", image: IMG.talk, span: "" },
-  { icon: CalendarDays, tag: "Harian", title: "Daily Schedule", body: "Linimasa aktivitas dan target pemulihan harian.", image: IMG.planner, span: "" },
+  { icon: BellRing, tag: "Help", title: "Nurse Call", body: "Call for help with the need spelled out — straight into the nurses' queue.", image: IMG.care, span: "lg:col-span-2 lg:row-span-2" },
+  { icon: UtensilsCrossed, tag: "Kitchen", title: "Meal Ordering", body: "Pick a menu that fits the diet, then follow its status.", image: IMG.food, span: "" },
+  { icon: Pill, tag: "Medical", title: "Medication schedule", body: "Reminders for every dose and when to take it.", image: IMG.pills, span: "" },
+  { icon: Clapperboard, tag: "Entertainment", title: "Entertainment", body: "Films, music and podcasts to pass the time.", image: IMG.media, span: "" },
+  { icon: Building2, tag: "Info", title: "Hospital Information", body: "Doctor profiles, house rules and inpatient guidance.", image: IMG.reception, span: "" },
+  { icon: GraduationCap, tag: "Education", title: "Health Education", body: "Articles and videos curated to the patient's condition.", image: IMG.books, span: "lg:col-span-2" },
+  { icon: MessageSquare, tag: "Patient voices", title: "Feedback", body: "Rate the service without leaving the bed.", image: IMG.talk, span: "" },
+  { icon: CalendarDays, tag: "Daily", title: "Daily Schedule", body: "A timeline of activity and daily recovery goals.", image: IMG.planner, span: "" },
 ];
 
 const BENEFITS = {
   patient: [
-    "Bantuan lebih cepat lewat nurse call transparan",
-    "Jadwal obat & terapi tak lagi terlewat",
-    "Pesan makanan sesuai diet secara mandiri",
-    "Hiburan & edukasi mengisi waktu rawat inap",
-    "Rasa mandiri dan tenang selama pemulihan",
+    "Faster help through a nurse call you can see",
+    "Medication and therapy no longer missed",
+    "Order diet-appropriate meals independently",
+    "Entertainment and education fill the hours",
+    "Independence and calm through recovery",
   ],
   hospital: [
-    "Beban kerja perawat lebih ringan & terarah",
-    "Alur permintaan pasien terdata dan terukur",
-    "Citra layanan digital yang modern",
-    "Umpan balik pasien real-time",
-    "Terhubung dengan sistem operasional",
+    "Lighter, better-directed workload for nurses",
+    "Every patient request recorded and measurable",
+    "A modern, digital standard of care",
+    "Real-time patient feedback",
+    "Connected to the systems you run",
   ],
 };
 
 const TESTIMONIALS = [
-  { name: "Budi Santoso", role: "Pasien · RS Sehat Sentosa", avatar: "1500648767791-00dcc994a43e", rating: 5, quote: "Saya bisa memanggil perawat dan melihat jadwal obat sendiri. Rasanya jauh lebih tenang selama dirawat." },
-  { name: "Ns. Rina Wijaya", role: "Perawat · Mitra Medika", avatar: "1494790108377-be9c29b29330", rating: 5, quote: "Permintaan pasien jadi lebih jelas prioritasnya. Kami bisa merespons yang mendesak lebih cepat." },
-  { name: "dr. Andini Putri", role: "Dokter · Prima Husada", avatar: "1438761681033-6461ffad8d80", rating: 5, quote: "Informasi jadwal dan edukasi tersampaikan konsisten ke pasien. Komunikasi jadi jauh lebih mudah." },
-  { name: "Rian Pratama", role: "Keluarga Pasien · Bunda Care", avatar: "1507003211169-0a1dd7228f2d", rating: 5, quote: "Sebagai keluarga, saya ikut tenang karena semua kebutuhan ayah saya terpantau di satu layar." },
+  { name: "Budi Santoso", role: "Patient · RS Sehat Sentosa", avatar: "1500648767791-00dcc994a43e", rating: 5, quote: "I can call a nurse and check my own medication schedule. It made the whole stay far less anxious." },
+  { name: "Ns. Rina Wijaya", role: "Nurse · Mitra Medika", avatar: "1494790108377-be9c29b29330", rating: 5, quote: "Patient requests arrive with clear priority. We reach the urgent ones faster." },
+  { name: "dr. Andini Putri", role: "Doctor · Prima Husada", avatar: "1438761681033-6461ffad8d80", rating: 5, quote: "Schedules and education reach patients consistently. Communication got much easier." },
+  { name: "Rian Pratama", role: "Patient's family · Bunda Care", avatar: "1507003211169-0a1dd7228f2d", rating: 5, quote: "As family, I worry less — everything my father needs is tracked on one screen." },
 ];
 
 const FAQS = [
-  { q: "Apa itu Medly?", a: "Medly adalah digital bedside companion — tablet di sisi tempat tidur yang menyatukan nurse call, jadwal, pemesanan makanan, edukasi, dan hiburan selama rawat inap." },
-  { q: "Bagaimana cara kerja Medly?", a: "Pasien login dari tablet, memilih fitur yang dibutuhkan, lalu permintaannya diteruskan ke tim rumah sakit yang tepat dan statusnya dapat dipantau langsung." },
-  { q: "Apakah bisa disesuaikan dengan rumah sakit?", a: "Ya. Menu makanan, informasi rumah sakit, konten edukasi, dan alur layanan dapat dikonfigurasi mengikuti kebijakan tiap rumah sakit." },
-  { q: "Apakah membutuhkan internet?", a: "Medly bekerja optimal pada jaringan rumah sakit. Sebagian besar fitur inti tetap dapat diakses dan tersinkron kembali saat koneksi tersedia." },
-  { q: "Apakah data pasien aman?", a: "Keamanan menjadi prioritas. Akses dibatasi per kamar, data dienkripsi, dan terhubung ke sistem rumah sakit sesuai standar kerahasiaan medis." },
+  { q: "What is Medly?", a: "Medly is a digital bedside companion — a tablet beside the bed that brings nurse call, schedules, meal ordering, education and entertainment together for the whole stay." },
+  { q: "Bagaimana cara kerja Medly?", a: "The patient signs in on the tablet, picks what they need, and the request goes to the right team — with its status visible the whole way." },
+  { q: "Can it be tailored to our hospital?", a: "Yes. Meal menus, hospital information, education content and service flows are all configurable to each hospital's policies." },
+  { q: "Apakah membutuhkan internet?", a: "Medly runs best on the hospital network. Most core features keep working offline and sync again once the connection returns." },
+  { q: "Is patient data safe?", a: "Security comes first. Access is scoped to each room, data is encrypted, and the connection to your systems follows medical confidentiality standards." },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -357,7 +357,7 @@ export default function Home() {
           </div>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-black transition hover:text-[#16A34A]">Masuk</Link>
+            <Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-black transition hover:text-[#16A34A]">Sign in</Link>
             <Link href="/register" className="group inline-flex items-center gap-2 rounded-xl bg-[#22C55E] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#22C55E]/30 transition-all duration-300 hover:bg-[#16A34A] hover:shadow-xl active:scale-[0.97]">
               Get Started <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
             </Link>
@@ -376,7 +376,7 @@ export default function Home() {
               </button>
             ))}
             <div className="mt-2 grid grid-cols-2 gap-2 border-t border-black/[0.07] pt-3">
-              <Link href="/login" className="rounded-xl border border-black/10 px-4 py-2.5 text-center text-sm font-semibold text-black">Masuk</Link>
+              <Link href="/login" className="rounded-xl border border-black/10 px-4 py-2.5 text-center text-sm font-semibold text-black">Sign in</Link>
               <Link href="/register" className="rounded-xl bg-[#22C55E] px-4 py-2.5 text-center text-sm font-semibold text-white">Get Started</Link>
             </div>
           </div>
@@ -401,9 +401,9 @@ export default function Home() {
             </Reveal>
             <Reveal delay={80}>
               <h1 className="mt-6 text-[42px] font-extrabold leading-[1.04] tracking-tight text-black sm:text-6xl">
-                Pengalaman rawat inap yang{" "}
+                A hospital stay that feels{" "}
                 <span className="relative text-[#16A34A]">
-                  lebih manusiawi
+                  more human
                   <svg viewBox="0 0 240 12" preserveAspectRatio="none" className="absolute -bottom-1.5 left-0 h-3 w-full text-[#22C55E]/40" aria-hidden>
                     <path d="M2 8c50-6 120-7 236-3" stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none" />
                   </svg>
@@ -412,7 +412,7 @@ export default function Home() {
             </Reveal>
             <Reveal delay={160}>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">
-                Satu tablet di sisi tempat tidur yang menyatukan layanan rumah sakit, jadwal, edukasi, dan hiburan — terhubung langsung dengan sistem operasional rumah sakit.
+                One tablet at the bedside that brings hospital services, schedules, education and entertainment together — wired straight into the hospital’s own systems.
               </p>
             </Reveal>
             <Reveal delay={240}>
@@ -428,9 +428,9 @@ export default function Home() {
             </Reveal>
             <Reveal delay={320}>
               <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-semibold text-black/55">
-                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-[#16A34A]" /> Data terenkripsi</span>
-                <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-[#16A34A]" /> Tersedia 24/7</span>
-                <span className="inline-flex items-center gap-1.5"><HeartPulse className="h-4 w-4 text-[#16A34A]" /> Terhubung sistem RS</span>
+                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-[#16A34A]" /> Encrypted data</span>
+                <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-[#16A34A]" /> Available 24/7</span>
+                <span className="inline-flex items-center gap-1.5"><HeartPulse className="h-4 w-4 text-[#16A34A]" /> Connected to your HIS</span>
               </div>
             </Reveal>
           </div>
@@ -439,10 +439,10 @@ export default function Home() {
           <Reveal variant="right" delay={200} className="relative">
             <div className="md-float rounded-[32px] border border-black/10 bg-white p-3 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.4)]">
               <div className="relative overflow-hidden rounded-[22px]">
-                <img src={img(IMG.room, 900)} alt="Ruang rawat inap" className="h-[300px] w-full object-cover sm:h-[420px]" loading="eager" />
+                <img src={img(IMG.room, 900)} alt="Inpatient room" className="h-[300px] w-full object-cover sm:h-[420px]" loading="eager" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
                 <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
-                  <span className="rounded-full bg-white/85 px-3 py-1 text-[11px] font-extrabold text-black backdrop-blur">Kamar 1218</span>
+                  <span className="rounded-full bg-white/85 px-3 py-1 text-[11px] font-extrabold text-black backdrop-blur">Room 1218</span>
                   <span className="flex -space-x-1.5">
                     {["SA", "BW", "RN"].map((i) => (
                       <span key={i} className="grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-[#16A34A] text-[9px] font-extrabold text-white">{i}</span>
@@ -450,7 +450,7 @@ export default function Home() {
                   </span>
                 </div>
                 <div className="absolute inset-x-3 bottom-3 grid grid-cols-4 gap-2">
-                  {[{ icon: BellRing, label: "Perawat" }, { icon: GlassWater, label: "Air" }, { icon: UtensilsCrossed, label: "Makanan" }, { icon: Pill, label: "Obat" }].map((q) => (
+                  {[{ icon: BellRing, label: "Nurses" }, { icon: GlassWater, label: "Water" }, { icon: UtensilsCrossed, label: "Meals" }, { icon: Pill, label: "Medication" }].map((q) => (
                     <div key={q.label} className="flex flex-col items-center gap-1 rounded-xl bg-white/85 py-2.5 backdrop-blur transition hover:bg-white">
                       <q.icon className="h-4 w-4 text-[#16A34A]" strokeWidth={2} />
                       <span className="text-[9px] font-extrabold text-black">{q.label}</span>
@@ -464,12 +464,12 @@ export default function Home() {
             <div className="absolute -left-4 top-8 hidden rounded-2xl border border-black/[0.07] bg-white/95 px-3.5 py-2.5 shadow-xl backdrop-blur md-float-slow sm:flex">
               <div className="flex items-center gap-2.5">
                 <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-[#22C55E]/10 text-[#16A34A] md-ping"><BellRing className="h-4 w-4" /></span>
-                <div><p className="text-[11px] font-extrabold text-black">Perawat menuju kamar</p><p className="text-[10px] font-semibold text-black/50">~ 2 menit</p></div>
+                <div><p className="text-[11px] font-extrabold text-black">A nurse is on the way</p><p className="text-[10px] font-semibold text-black/50">~ 2 min</p></div>
               </div>
             </div>
             <div className="absolute -bottom-5 right-2 hidden items-center gap-2.5 overflow-hidden rounded-2xl border border-black/[0.07] bg-white/95 p-2 pr-3.5 shadow-xl backdrop-blur md-float sm:flex">
               <img src={img(IMG.food, 200)} alt="" className="h-11 w-11 rounded-xl object-cover" />
-              <div><p className="text-[11px] font-extrabold text-black">Makanan dipesan</p><p className="text-[10px] font-semibold text-[#16A34A]">Diet rendah garam</p></div>
+              <div><p className="text-[11px] font-extrabold text-black">Meal ordered</p><p className="text-[10px] font-semibold text-[#16A34A]">Low-salt diet</p></div>
             </div>
           </Reveal>
         </div>
@@ -478,7 +478,7 @@ export default function Home() {
       {/* ---------------- Trusted by ---------------- */}
       <section className="border-y border-black/[0.06] bg-white py-10">
         <div className="mx-auto max-w-6xl px-6">
-          <p className="text-center text-[11px] font-bold uppercase tracking-[0.16em] text-black/40">Dipercaya rumah sakit di seluruh Indonesia</p>
+          <p className="text-center text-[11px] font-bold uppercase tracking-[0.16em] text-black/40">Trusted by hospitals across Indonesia</p>
         </div>
         <div className="md-marquee-group relative mt-7 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]">
           <div className="md-marquee flex w-max gap-4 pr-4">
@@ -498,10 +498,10 @@ export default function Home() {
           <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
             <div className="lg:sticky lg:top-28">
               <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Permasalahan</span></Reveal>
-              <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-black sm:text-4xl">Rawat inap penuh hambatan kecil yang berulang</h2></Reveal>
-              <Reveal delay={140}><p className="mt-5 text-[17px] leading-relaxed text-black/60">Ketidakjelasan dan penantian membuat masa rawat inap melelahkan — bagi pasien maupun tim rumah sakit.</p></Reveal>
+              <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-black sm:text-4xl">A hospital stay is full of small, repeating frictions</h2></Reveal>
+              <Reveal delay={140}><p className="mt-5 text-[17px] leading-relaxed text-black/60">Uncertainty and waiting wear people down — the patient and the hospital team alike.</p></Reveal>
               <Reveal delay={200} className="mt-8 overflow-hidden rounded-3xl border border-black/[0.07]">
-                <img src={img(IMG.consult, 700)} alt="Konsultasi pasien" className="h-56 w-full object-cover" loading="lazy" />
+                <img src={img(IMG.consult, 700)} alt="Patient consultations" className="h-56 w-full object-cover" loading="lazy" />
               </Reveal>
             </div>
             <div className="divide-y divide-black/[0.08]">
@@ -528,12 +528,12 @@ export default function Home() {
           <Reveal variant="left" className="relative order-2 lg:order-1">
             <div className="absolute -inset-5 -z-10 rounded-[40px] bg-[#22C55E]/10 blur-2xl" />
             <div className="overflow-hidden rounded-[28px] border border-black/10 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.45)]">
-              <img src={img(IMG.room, 1000)} alt="Ruang rawat Medly" className="h-[380px] w-full object-cover md-float" loading="lazy" />
+              <img src={img(IMG.room, 1000)} alt="Medly inpatient room" className="h-[380px] w-full object-cover md-float" loading="lazy" />
             </div>
             <div className="absolute -bottom-6 -right-4 hidden rounded-2xl border border-black/[0.07] bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block">
               <div className="flex items-center gap-2">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#16A34A] text-white"><Check className="h-4 w-4" strokeWidth={3} /></span>
-                <div><p className="text-[11px] font-extrabold text-black">Semua terhubung</p><p className="text-[10px] font-semibold text-black/50">Real-time ke sistem RS</p></div>
+                <div><p className="text-[11px] font-extrabold text-black">Everything connected</p><p className="text-[10px] font-semibold text-black/50">Real-time to your HIS</p></div>
               </div>
             </div>
           </Reveal>
@@ -541,7 +541,7 @@ export default function Home() {
           <div className="order-1 lg:order-2">
             <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Solusinya</span></Reveal>
             <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Meet Medly</h2></Reveal>
-            <Reveal delay={140}><p className="mt-4 text-[17px] leading-relaxed text-black/60">Satu antarmuka sederhana yang menjawab setiap hambatan tadi — langsung dari sisi tempat tidur pasien.</p></Reveal>
+            <Reveal delay={140}><p className="mt-4 text-[17px] leading-relaxed text-black/60">One simple interface that answers every one of those frustrations — right from the patient’s bedside.</p></Reveal>
             <div className="mt-8 space-y-3">
               {SOLUTIONS.map((s, i) => (
                 <Reveal key={s.title} delay={i * 90}>
@@ -563,8 +563,8 @@ export default function Home() {
           <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
             <div>
               <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Tentang Medly</span></Reveal>
-              <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-black sm:text-4xl">Teknologi yang mendekatkan pasien dan layanan</h2></Reveal>
-              <Reveal delay={140}><p className="mt-5 text-[17px] leading-relaxed text-black/60">Medly adalah digital bedside companion untuk pengalaman rawat inap. Dari satu tablet, pasien memanggil perawat, melihat jadwal, memesan makanan, belajar tentang kondisinya, hingga menikmati hiburan — semua terhubung dengan sistem operasional rumah sakit secara real-time.</p></Reveal>
+              <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-black sm:text-4xl">Technology that brings patients and care closer</h2></Reveal>
+              <Reveal delay={140}><p className="mt-5 text-[17px] leading-relaxed text-black/60">Medly is a digital bedside companion for the inpatient experience. From one tablet a patient can call a nurse, check their schedule, order meals, learn about their condition and enjoy entertainment — all connected to the hospital’s own systems in real time.</p></Reveal>
               <Reveal delay={200}>
                 <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {STATS.map((s) => (
@@ -579,12 +579,12 @@ export default function Home() {
 
             <Reveal variant="right" delay={120} className="relative">
               <div className="overflow-hidden rounded-[28px] border border-black/10 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.45)]">
-                <img src={img(IMG.building, 900)} alt="Rumah sakit mitra Medly" className="h-[420px] w-full object-cover" loading="lazy" />
+                <img src={img(IMG.building, 900)} alt="Medly partner hospitals" className="h-[420px] w-full object-cover" loading="lazy" />
               </div>
               <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/40 bg-white/85 p-4 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#16A34A] text-white"><HeartPulse className="h-5 w-5" /></span>
-                  <div><p className="text-sm font-extrabold text-black">Patient-centered care</p><p className="text-[12px] font-medium text-black/55">Satu layar di sisi tempat tidur</p></div>
+                  <div><p className="text-sm font-extrabold text-black">Patient-centered care</p><p className="text-[12px] font-medium text-black/55">One screen at the bedside</p></div>
                 </div>
               </div>
             </Reveal>
@@ -598,8 +598,8 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Fitur</span></Reveal>
-            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Semua yang pasien butuhkan, dalam satu layar</h2></Reveal>
-            <Reveal delay={140}><p className="mt-4 text-[17px] leading-relaxed text-black/60">Delapan layanan inti yang bersumber dari satu sistem rumah sakit yang sama.</p></Reveal>
+            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Everything a patient needs, on one screen</h2></Reveal>
+            <Reveal delay={140}><p className="mt-4 text-[17px] leading-relaxed text-black/60">Eight core services, all drawn from the same hospital system.</p></Reveal>
           </div>
 
           <div className="mt-14 grid auto-rows-[240px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -631,18 +631,18 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Manfaat</span></Reveal>
-            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Menang untuk kedua sisi</h2></Reveal>
-            <Reveal delay={140}><p className="mt-4 text-[17px] leading-relaxed text-black/60">Satu sistem yang membuat pasien lebih tenang sekaligus meringankan kerja rumah sakit.</p></Reveal>
+            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Both sides win</h2></Reveal>
+            <Reveal delay={140}><p className="mt-4 text-[17px] leading-relaxed text-black/60">One system that calms the patient and lightens the hospital’s load at the same time.</p></Reveal>
           </div>
 
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
             {/* Patient */}
             <Reveal variant="left">
               <div className="group relative h-full overflow-hidden rounded-3xl border border-black/[0.07] bg-white p-8 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-500 hover:-translate-y-1.5 hover:border-[#22C55E]/30 hover:shadow-[0_30px_60px_-32px_rgba(22,163,74,0.35)] sm:p-10">
-                <span className="absolute right-6 top-6 rounded-full bg-[#22C55E]/10 px-3 py-1 text-[11px] font-bold text-[#16A34A]">Sisi pasien</span>
+                <span className="absolute right-6 top-6 rounded-full bg-[#22C55E]/10 px-3 py-1 text-[11px] font-bold text-[#16A34A]">Patient side</span>
                 <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#22C55E]/10 text-[#16A34A] transition duration-500 group-hover:bg-[#16A34A] group-hover:text-white group-hover:-rotate-6"><HandHeart className="h-6 w-6" /></span>
-                <h3 className="mt-5 text-2xl font-extrabold tracking-tight text-black">Untuk Pasien</h3>
-                <p className="mt-1.5 text-sm font-medium text-black/50">Kontrol dan kenyamanan kembali ke tangan pasien.</p>
+                <h3 className="mt-5 text-2xl font-extrabold tracking-tight text-black">For Patients</h3>
+                <p className="mt-1.5 text-sm font-medium text-black/50">Control and comfort back in the patient’s hands.</p>
                 <ul className="mt-7 space-y-1">
                   {BENEFITS.patient.map((b) => (
                     <li key={b} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-300 hover:bg-[#22C55E]/[0.07]">
@@ -663,10 +663,10 @@ export default function Home() {
                 <div className="pointer-events-none absolute inset-0 opacity-[0.18]" style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "34px 34px", maskImage: "radial-gradient(ellipse 70% 60% at 80% 10%, #000, transparent 70%)" }} />
                 <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/15 blur-3xl" />
                 <div className="relative">
-                  <span className="absolute right-0 top-0 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold text-white backdrop-blur">Sisi rumah sakit</span>
+                  <span className="absolute right-0 top-0 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold text-white backdrop-blur">Hospital side</span>
                   <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 text-white backdrop-blur transition duration-500 group-hover:bg-white group-hover:text-[#16A34A] group-hover:-rotate-6"><Building2 className="h-6 w-6" /></span>
-                  <h3 className="mt-5 text-2xl font-extrabold tracking-tight">Untuk Rumah Sakit</h3>
-                  <p className="mt-1.5 text-sm font-medium text-white/70">Efisiensi kerja dan mutu layanan yang meningkat.</p>
+                  <h3 className="mt-5 text-2xl font-extrabold tracking-tight">For Hospitals</h3>
+                  <p className="mt-1.5 text-sm font-medium text-white/70">Sharper efficiency and better service quality.</p>
                   <ul className="mt-7 space-y-1">
                     {BENEFITS.hospital.map((b) => (
                       <li key={b} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-300 hover:bg-white/10">
@@ -676,7 +676,7 @@ export default function Home() {
                     ))}
                   </ul>
                   <div className="mt-7 flex items-center gap-2.5 border-t border-white/20 pt-5 text-sm font-semibold text-white/85">
-                    <ShieldCheck className="h-4 w-4" /> Layanan modern, terukur, dan terpercaya
+                    <ShieldCheck className="h-4 w-4" /> Modern, measurable, dependable care
                   </div>
                 </div>
               </div>
@@ -690,7 +690,7 @@ export default function Home() {
         <div className="mx-auto max-w-4xl px-6">
           <div className="text-center">
             <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Testimoni</span></Reveal>
-            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Dirasakan langsung di ruang rawat</h2></Reveal>
+            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Felt right there in the ward</h2></Reveal>
           </div>
           <Reveal delay={120} className="relative mt-12">
             <div className="relative overflow-hidden rounded-3xl border border-black/[0.07] bg-white p-8 shadow-[0_30px_70px_-40px_rgba(22,163,74,0.35)] sm:p-12">
@@ -714,7 +714,7 @@ export default function Home() {
             <div className="mt-6 flex items-center justify-center gap-4">
               <button
                 onClick={() => setSlide((s) => (s - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)}
-                aria-label="Sebelumnya"
+                aria-label="Previous"
                 className="grid h-10 w-10 place-items-center rounded-full border border-black/10 bg-white text-black/60 transition hover:-translate-x-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A] active:scale-95"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -726,7 +726,7 @@ export default function Home() {
               </div>
               <button
                 onClick={() => setSlide((s) => (s + 1) % TESTIMONIALS.length)}
-                aria-label="Berikutnya"
+                aria-label="Next"
                 className="grid h-10 w-10 place-items-center rounded-full border border-black/10 bg-white text-black/60 transition hover:translate-x-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A] active:scale-95"
               >
                 <ArrowRight className="h-5 w-5" />
@@ -742,7 +742,7 @@ export default function Home() {
         <div className="mx-auto max-w-3xl px-6">
           <div className="text-center">
             <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">FAQ</span></Reveal>
-            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Pertanyaan yang sering diajukan</h2></Reveal>
+            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Frequently asked questions</h2></Reveal>
           </div>
           <div className="mt-12 space-y-3">
             {FAQS.map((f, i) => (
@@ -762,9 +762,9 @@ export default function Home() {
             <div className="pointer-events-none absolute -bottom-16 -right-10 h-64 w-64 rounded-full bg-black/10 blur-3xl md-float-slow" />
             <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.4) 1px, transparent 1px)", backgroundSize: "40px 40px", maskImage: "radial-gradient(ellipse 60% 60% at 50% 50%, #000, transparent 75%)" }} />
             <div className="relative">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[12px] font-bold text-white backdrop-blur"><Sparkles className="h-3.5 w-3.5" /> Siap meningkatkan pengalaman pasien?</span>
-              <h2 className="mx-auto mt-6 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">Hadirkan Medly di setiap sisi tempat tidur</h2>
-              <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-white/85">Bergabunglah dengan rumah sakit yang menjadikan perawatan lebih terhubung, transparan, dan berpusat pada pasien.</p>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[12px] font-bold text-white backdrop-blur"><Sparkles className="h-3.5 w-3.5" /> Ready to improve the patient experience?</span>
+              <h2 className="mx-auto mt-6 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">Bring Medly to every bedside</h2>
+              <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-white/85">Join the hospitals making care more connected, more transparent, and more centred on the patient.</p>
               <div className="mt-9 flex flex-wrap justify-center gap-3">
                 <Link href="/register" className="group inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-[#16A34A] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98]">Get Started <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" /></Link>
                 <a href="mailto:hello@medly.id" className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 text-sm font-bold text-white backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/20">Contact Sales</a>
@@ -780,7 +780,7 @@ export default function Home() {
           <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <div>
               <div className="flex items-center gap-2.5"><BrandMark className="h-9 w-9" /><span className="text-lg font-extrabold tracking-tight text-black">Medly</span></div>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-black/55">Digital bedside companion yang menghadirkan perawatan lebih manusiawi, satu layar di sisi tempat tidur.</p>
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-black/55">A digital bedside companion that makes care feel more human — one screen, right beside the bed.</p>
               <div className="mt-6 flex gap-2.5">
                 {[{ icon: Globe, label: "Website" }, { icon: AtSign, label: "Email" }, { icon: MessageCircle, label: "Chat" }, { icon: Send, label: "Telegram" }].map((s) => (
                   <a key={s.label} href="#" aria-label={s.label} className="grid h-10 w-10 place-items-center rounded-xl border border-black/[0.08] bg-white text-black/50 transition hover:-translate-y-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A]"><s.icon className="h-4 w-4" /></a>
@@ -789,7 +789,7 @@ export default function Home() {
             </div>
             {[
               { title: "Produk", links: [["Features", "features"], ["Benefits", "benefits"], ["About", "about"]] },
-              { title: "Dukungan", links: [["FAQ", "faq"], ["Contact", "contact"], ["Privacy", "contact"]] },
+              { title: "Support", links: [["FAQ", "faq"], ["Contact", "contact"], ["Privacy", "contact"]] },
               { title: "Perusahaan", links: [["Home", "home"], ["About", "about"], ["Karier", "about"]] },
             ].map((col) => (
               <div key={col.title}>
@@ -806,7 +806,7 @@ export default function Home() {
             <p className="text-xs text-black/40">© {new Date().getFullYear()} Medly. Patient-centered care, satu layar di sisi tempat tidur.</p>
             <div className="flex items-center gap-5 text-xs font-semibold text-black/40">
               <span className="inline-flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Data aman</span>
-              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Standar medis</span>
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Medical standard</span>
             </div>
           </div>
         </div>

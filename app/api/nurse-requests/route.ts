@@ -74,7 +74,7 @@ export async function PATCH(req: NextRequest) {
       {
         error:
           caller.status === 403
-            ? "Hanya perawat yang dapat mengubah status permintaan."
+            ? "Only nurses can change a request's status."
             : caller.error,
       },
       { status: caller.status }
@@ -91,7 +91,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Missing request id or status" }, { status: 422 });
     }
     if (!["PENDING", "IN_PROGRESS", "RESOLVED"].includes(status)) {
-      return NextResponse.json({ error: "Status tidak valid" }, { status: 422 });
+      return NextResponse.json({ error: "Invalid status" }, { status: 422 });
     }
 
     const updateData: Record<string, unknown> = { status, updated_at: new Date().toISOString() };

@@ -10,8 +10,8 @@ import { cn } from "@/src/lib/utils";
 type Item = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
 const SYSTEM: Item[] = [
-  { href: "/dashboard/admin", label: "Ringkasan", icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/admin/create-hospital", label: "Buat Rumah Sakit", icon: Building2 },
+  { href: "/dashboard/admin", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/admin/create-hospital", label: "Create Hospital", icon: Building2 },
 ];
 
 function NavLink({ item }: { item: Item }) {
@@ -58,7 +58,7 @@ export function AdminSidebar({ userName }: { userName: string }) {
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
         <div>
-          <p className="eyebrow px-4 pb-2">Sistem</p>
+          <p className="eyebrow px-4 pb-2">System</p>
           <div className="space-y-0.5">
             {SYSTEM.map((item) => (
               <NavLink key={item.href} item={item} />

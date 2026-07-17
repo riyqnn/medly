@@ -7,21 +7,21 @@ export default function AdminDashboardPage() {
     <PageShell>
       <PageHeader 
         title="Admin Dashboard" 
-        description="Kelola rumah sakit di ekosistem Medly." 
+        description="Run your hospital in the Medly ecosystem." 
       />
 
       <div className="mt-6">
         <div className="card p-6">
           <h2 className="text-lg font-extrabold tracking-tight text-ink">
-            Manajemen Rumah Sakit
+            Hospital Management
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-            Buat akun rumah sakit baru yang mencakup profil rumah sakit dan akun admin pertamanya.
+            Create a new hospital account, including its profile and first admin login.
           </p>
           <div className="mt-5">
             <Link href="/dashboard/admin/create-hospital" className="btn-primary inline-flex gap-2">
               <Building2 className="h-4 w-4" />
-              Buat Rumah Sakit Baru
+              Create New Hospital
             </Link>
           </div>
         </div>

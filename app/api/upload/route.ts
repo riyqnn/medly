@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
     if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Hanya berkas gambar yang diizinkan." }, { status: 415 });
+      return NextResponse.json({ error: "Only image files are allowed." }, { status: 415 });
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: "Ukuran gambar maksimal 2 MB." }, { status: 413 });

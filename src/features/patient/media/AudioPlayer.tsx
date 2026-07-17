@@ -94,7 +94,7 @@ export function AudioPlayer({
 
       {failed ? (
         <p className="mt-6 text-center text-lg font-bold text-ink-mute">
-          Audio ini tidak dapat diputar sekarang.
+          This audio won’t play right now.
         </p>
       ) : (
         <>
@@ -102,11 +102,11 @@ export function AudioPlayer({
             ref={railRef}
             role="slider"
             tabIndex={0}
-            aria-label="Posisi audio"
+            aria-label="Audio position"
             aria-valuemin={0}
             aria-valuemax={Math.round(duration)}
             aria-valuenow={Math.round(time)}
-            aria-valuetext={`${clock(time)} dari ${clock(duration)}`}
+            aria-valuetext={`${clock(time)} of ${clock(duration)}`}
             onKeyDown={(e) => {
               if (e.key === "ArrowRight") skip(10);
               if (e.key === "ArrowLeft") skip(-10);
@@ -141,21 +141,21 @@ export function AudioPlayer({
           <div className="mt-5 flex items-center gap-5">
             <button
               onClick={() => skip(-10)}
-              aria-label="Mundur 10 detik"
+              aria-label="Back 10 seconds"
               className="grid h-16 w-16 place-items-center rounded-full border border-line bg-white text-ink-soft shadow-card transition active:scale-90 hover:border-brand-300 hover:text-brand-700"
             >
               <RotateCcw className="h-7 w-7" strokeWidth={2.4} />
             </button>
             <button
               onClick={toggle}
-              aria-label={playing ? "Jeda" : "Putar"}
+              aria-label={playing ? "Pause" : "Play"}
               className="grid h-24 w-24 place-items-center rounded-full bg-brand-500 text-white shadow-float transition active:scale-95 hover:bg-brand-600"
             >
               {playing ? <Pause className="h-10 w-10 fill-current" /> : <Play className="ml-1.5 h-10 w-10 fill-current" />}
             </button>
             <button
               onClick={() => skip(10)}
-              aria-label="Maju 10 detik"
+              aria-label="Forward 10 seconds"
               className="grid h-16 w-16 place-items-center rounded-full border border-line bg-white text-ink-soft shadow-card transition active:scale-90 hover:border-brand-300 hover:text-brand-700"
             >
               <RotateCw className="h-7 w-7" strokeWidth={2.4} />

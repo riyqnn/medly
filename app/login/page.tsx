@@ -5,16 +5,16 @@ import { AuthShell } from "@/src/features/auth/components/AuthShell";
 export default function LoginPage() {
   return (
     <AuthShell
-      title="Masuk ke Medly"
-      subtitle="Kelola pasien, jadwal, dan layanan rawat inap Anda."
+      title="Sign in to Medly"
+      subtitle="Manage your patients, schedules and inpatient services."
       footer={null}
       pitch={{
-        heading: "Satu layar di sisi tempat tidur, terhubung ke seluruh rumah sakit.",
-        body: "Medly menghubungkan pasien dengan perawat, jadwal perawatan, makanan, edukasi, dan hiburan — semuanya bersumber dari sistem yang Anda kelola.",
+        heading: "One screen at the bedside, connected to the whole hospital.",
+        body: "Medly connects patients to nurses, treatment schedules, meals, education and entertainment — all sourced from the systems you already run.",
         points: [
-          "Permintaan pasien langsung masuk ke perawat",
-          "Jadwal dari HIS tampil otomatis di tablet",
-          "Pemesanan makanan tanpa menunggu petugas",
+          "Patient requests land straight with a nurse",
+          "HIS schedules appear on the tablet automatically",
+          "Meal ordering without waiting for staff",
         ],
       }}
     >

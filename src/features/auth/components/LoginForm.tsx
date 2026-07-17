@@ -47,7 +47,7 @@ export function LoginForm() {
 
       <div>
         <label htmlFor="password" className="label">
-          Kata sandi
+          Password
         </label>
         <input
           id="password"
@@ -68,7 +68,7 @@ export function LoginForm() {
       )}
 
       <button type="submit" disabled={loading} className="btn-primary w-full">
-        {loading ? "Masuk…" : "Masuk"}
+        {loading ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );

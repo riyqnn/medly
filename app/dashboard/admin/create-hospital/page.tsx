@@ -5,8 +5,8 @@ export default function CreateHospitalPage() {
   return (
     <PageShell>
       <PageHeader 
-        title="Buat Rumah Sakit Baru" 
-        description="Daftarkan rumah sakit ke dalam sistem beserta akun admin pertamanya." 
+        title="Create New Hospital" 
+        description="Register a hospital in the system along with its first admin account." 
       />
 
       <div className="mt-6 max-w-xl">

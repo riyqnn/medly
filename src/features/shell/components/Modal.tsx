@@ -70,7 +70,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label="Close"
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
           >
             <X className="h-4 w-4" />

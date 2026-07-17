@@ -79,7 +79,7 @@ export default function MealsPage() {
   }
 
   if (loading || !sitting)
-    return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
+    return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Loading…</div>;
 
   const available = menus.filter((m) => !m.meal_type_tags?.length || m.meal_type_tags.includes(sitting));
   const active = orders.filter((o) => o.status !== "REJECTED").slice(0, 2);
@@ -102,7 +102,7 @@ export default function MealsPage() {
           )
         }
       >
-        Pesan Makanan
+        Order Meals
       </BedsideTitle>
 
       {/* Sitting switcher — three targets, thumb-sized. */}
@@ -127,7 +127,7 @@ export default function MealsPage() {
         items={available}
         perPage={6}
         className="grid-cols-2 grid-rows-3 sm:grid-cols-3 sm:grid-rows-2"
-        empty="Belum ada menu untuk sesi ini"
+        empty="No menu for this session yet"
         render={(m) => {
           const isDone = done === m.id;
           return (
@@ -154,14 +154,14 @@ export default function MealsPage() {
               </div>
               <div className={cn("shrink-0 px-4 py-3", isDone && "text-white")}>
                 <p className={cn("truncate text-lg font-extrabold leading-tight", isDone ? "text-white" : "text-ink")}>
-                  {isDone ? "Pesanan terkirim" : m.name}
+                  {isDone ? "Order sent" : m.name}
                 </p>
                 <p className={cn("tabular text-sm font-bold", isDone ? "text-white/80" : "text-brand-600")}>
                   {ordering === m.id
                     ? "Memesan…"
                     : Number(m.price) > 0
                       ? formatRupiah(m.price)
-                      : "Termasuk perawatan"}
+                      : "Included in care"}
                 </p>
               </div>
             </button>

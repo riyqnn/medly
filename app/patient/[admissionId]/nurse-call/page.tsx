@@ -62,7 +62,7 @@ export default function NurseCallPage() {
     });
     setPending(null);
     if (!res.ok) {
-      setError("Permintaan gagal terkirim. Coba tekan sekali lagi.");
+      setError("The request didn't go through. Press once more.");
       return;
     }
     setSent(category);
@@ -93,7 +93,7 @@ export default function NurseCallPage() {
           )
         }
       >
-        Butuh bantuan apa?
+        What do you need?
       </BedsideTitle>
 
       {error && (
@@ -136,7 +136,7 @@ export default function NurseCallPage() {
                 />
               </span>
               <span className="text-base font-extrabold leading-tight sm:text-lg">
-                {isSent ? "Perawat diberi tahu" : cat.label}
+                {isSent ? "The nurses have been notified" : cat.label}
               </span>
             </button>
           );

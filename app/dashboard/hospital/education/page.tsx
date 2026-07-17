@@ -108,13 +108,13 @@ export default function EducationPage() {
           body: JSON.stringify(form),
         });
     setSaving(false);
-    if (!res.ok) return setError((await res.json()).error ?? "Gagal menyimpan");
+    if (!res.ok) return setError((await res.json()).error ?? "Couldn't save");
     setShowModal(false);
     load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus konten ini?")) return;
+    if (!confirm("Delete this content?")) return;
     await fetch(`/api/education/${id}`, { method: "DELETE" });
     load();
   }
@@ -132,12 +132,12 @@ export default function EducationPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Layanan pasien"
-        title="Edukasi"
-        description="Konten yang dipublikasikan tampil di tablet pasien."
+        eyebrow="Patient services"
+        title="Education"
+        description="Published content appears on patient tablets."
         action={
           <button onClick={openAdd} className="btn-primary">
-            <Plus className="h-4 w-4" /> Tambah konten
+            <Plus className="h-4 w-4" /> Add content
           </button>
         }
       />
@@ -148,11 +148,11 @@ export default function EducationPage() {
         ) : contents.length === 0 ? (
           <EmptyState
             icon={GraduationCap}
-            title="Belum ada konten edukasi"
-            hint="Tambahkan artikel, video, atau infografik yang relevan dengan pasien Anda."
+            title="No education content yet"
+            hint="Add articles, videos or infographics relevant to your patients."
             action={
               <button onClick={openAdd} className="btn-primary">
-                <Plus className="h-4 w-4" /> Tambah konten
+                <Plus className="h-4 w-4" /> Add content
               </button>
             }
           />
@@ -160,11 +160,11 @@ export default function EducationPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-line bg-canvas/60">
-                <th className="eyebrow px-6 py-3 font-bold">Judul</th>
-                <th className="eyebrow px-6 py-3 font-bold">Jenis</th>
-                <th className="eyebrow px-6 py-3 font-bold">Sumber</th>
+                <th className="eyebrow px-6 py-3 font-bold">Title</th>
+                <th className="eyebrow px-6 py-3 font-bold">Type</th>
+                <th className="eyebrow px-6 py-3 font-bold">Source</th>
                 <th className="eyebrow px-6 py-3 font-bold">Status</th>
-                <th className="eyebrow px-6 py-3 text-right font-bold">Aksi</th>
+                <th className="eyebrow px-6 py-3 text-right font-bold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -190,20 +190,20 @@ export default function EducationPage() {
                           c.hospital_id ? "bg-canvas text-ink-soft" : "bg-violet-50 text-violet-700"
                         )}
                       >
-                        {c.hospital_id ? "Rumah sakit" : "Global"}
+                        {c.hospital_id ? "Hospital" : "Global"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <button
                         onClick={() => togglePublish(c)}
                         disabled={!c.hospital_id}
-                        title={c.hospital_id ? "Klik untuk mengubah" : "Konten global tidak dapat diubah"}
+                        title={c.hospital_id ? "Click to change" : "Global content can't be edited"}
                         className={cn(
                           "chip transition disabled:cursor-not-allowed disabled:opacity-60",
                           c.is_published ? "bg-brand-50 text-brand-700" : "bg-canvas text-ink-mute"
                         )}
                       >
-                        {c.is_published ? "Tayang" : "Draf"}
+                        {c.is_published ? "Live" : "Draft"}
                       </button>
                     </td>
                     <td className="px-6 py-4">
@@ -211,14 +211,14 @@ export default function EducationPage() {
                         <div className="flex items-center justify-end gap-1 opacity-0 transition group-hover:opacity-100">
                           <button
                             onClick={() => openEdit(c)}
-                            title="Ubah"
+                            title="Edit"
                             className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-white hover:text-ink"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(c.id)}
-                            title="Hapus"
+                            title="Delete"
                             className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -240,7 +240,7 @@ export default function EducationPage() {
             total={list.total}
             limit={list.limit}
             onPage={setPage}
-            noun="konten"
+            noun="items"
           />
         )}
       </div>
@@ -248,24 +248,24 @@ export default function EducationPage() {
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title={editTarget ? "Ubah konten" : "Tambah konten"}
+        title={editTarget ? "Edit content" : "Add content"}
         width="max-w-lg"
       >
         <FormError>{error}</FormError>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Judul</label>
+            <label className="label">Title</label>
             <input
               required
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="field"
-              placeholder="Tips pemulihan pasca operasi"
+              placeholder="Post-surgery recovery tips"
             />
           </div>
 
           <div>
-            <span className="label">Jenis konten</span>
+            <span className="label">Content type</span>
             <div className="grid grid-cols-4 gap-2">
               {Object.entries(EDUCATION_TYPES).map(([key, t]) => {
                 const Icon = ICONS[key];
@@ -311,7 +311,7 @@ export default function EducationPage() {
               onChange={(e) => setForm({ ...form, body_text: e.target.value })}
               rows={form.content_type === "ARTICLE" ? 5 : 3}
               className="field resize-none"
-              placeholder="Tulis dengan bahasa yang mudah dipahami pasien…"
+              placeholder="Write in plain language a patient can follow…"
             />
           </div>
 
@@ -322,15 +322,15 @@ export default function EducationPage() {
               onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
               className="h-4 w-4 accent-brand-500"
             />
-            <span className="text-sm font-semibold text-ink">Tayangkan di tablet pasien</span>
+            <span className="text-sm font-semibold text-ink">Publish to patient tablets</span>
           </label>
 
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? "Menyimpan…" : "Simpan"}
+              {saving ? "Menyimpan…" : "Save"}
             </button>
           </div>
         </form>

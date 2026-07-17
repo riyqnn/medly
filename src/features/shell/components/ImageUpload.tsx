@@ -34,10 +34,10 @@ export function ImageUpload({
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal mengunggah gambar");
+      if (!res.ok) throw new Error(data.error || "Couldn't upload the image");
       onChange(data.url);
     } catch (err: any) {
-      setError(err.message || "Gagal mengunggah gambar");
+      setError(err.message || "Couldn't upload the image");
     } finally {
       setUploading(false);
     }
@@ -61,7 +61,7 @@ export function ImageUpload({
           <button
             type="button"
             onClick={() => onChange("")}
-            aria-label="Hapus gambar"
+            aria-label="Remove image"
             className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-white/90 text-ink-soft shadow-sm backdrop-blur transition hover:text-red-600"
           >
             <X className="h-3.5 w-3.5" />
@@ -76,7 +76,7 @@ export function ImageUpload({
         >
           <ImagePlus className={cn("h-6 w-6 text-brand-500", uploading && "animate-pulse")} />
           <span className="text-xs font-bold text-ink-soft">
-            {uploading ? "Mengunggah…" : "Pilih gambar"}
+            {uploading ? "Mengunggah…" : "Choose image"}
           </span>
           <input
             type="file"

@@ -36,7 +36,7 @@ export function BedsideTopBar({
   const [clock, setClock] = useState<string | null>(null);
   useEffect(() => {
     const tick = () =>
-      setClock(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
+      setClock(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
     tick();
     const t = setInterval(tick, 30_000);
     return () => clearInterval(t);
@@ -67,14 +67,14 @@ export function BedsideTopBar({
           className="flex h-14 items-center gap-3 rounded-2xl border border-line bg-white pl-4 pr-6 text-lg font-extrabold text-ink shadow-card transition active:scale-[0.97] hover:border-brand-300 hover:bg-brand-50"
         >
           <ArrowLeft className="h-6 w-6 text-brand-600" strokeWidth={2.6} />
-          Kembali
+          Back
         </button>
       )}
 
       <div className="flex items-center gap-4 sm:gap-5">
         <div className="text-right leading-tight">
           <p className="text-base font-extrabold text-ink sm:text-lg">
-            Kamar {room ?? "—"}
+            Room {room ?? "—"}
             {clock && <span className="tabular ml-2 font-bold text-brand-600">{clock}</span>}
           </p>
           <p className="text-xs font-medium text-ink-mute sm:text-sm">
@@ -144,7 +144,7 @@ export function BedsideReader({
           onClick={onClose}
           className="flex h-14 shrink-0 items-center gap-2 rounded-2xl border border-line bg-white pl-4 pr-5 text-lg font-extrabold text-ink shadow-card transition hover:border-brand-300 hover:bg-brand-50 active:scale-[0.97]"
         >
-          <X className="h-6 w-6 text-brand-600" strokeWidth={2.6} /> Tutup
+          <X className="h-6 w-6 text-brand-600" strokeWidth={2.6} /> Close
         </button>
       </div>
       {variant === "stage" ? (
@@ -222,7 +222,7 @@ export function Pager<T>({
             <button
               key={i}
               onClick={() => setPage(i)}
-              aria-label={`Halaman ${i + 1}`}
+              aria-label={`Page ${i + 1}`}
               className={cn(
                 "h-2.5 rounded-full transition-all",
                 i === safePage ? "w-8 bg-brand-500" : "w-2.5 bg-brand-200 hover:bg-brand-300"
@@ -248,7 +248,7 @@ function PagerArrow({
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-label={dir === "prev" ? "Sebelumnya" : "Berikutnya"}
+      aria-label={dir === "prev" ? "Previous" : "Next"}
       className={cn(
         "grid w-14 shrink-0 place-items-center rounded-2xl border border-line bg-white shadow-card transition active:scale-95 sm:w-16",
         disabled ? "opacity-30" : "hover:border-brand-300 hover:bg-brand-50"

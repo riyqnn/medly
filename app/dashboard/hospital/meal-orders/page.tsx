@@ -30,7 +30,7 @@ interface MealOrder {
 /** Kitchen flow: a pending order gets prepared, a prepared order gets delivered. */
 const NEXT: Record<string, { status: string; label: string }> = {
   PENDING: { status: "PREPARING", label: "Mulai siapkan" },
-  PREPARING: { status: "DELIVERED", label: "Tandai terkirim" },
+  PREPARING: { status: "DELIVERED", label: "Mark delivered" },
 };
 
 export default function MealOrdersPage() {
@@ -70,9 +70,9 @@ export default function MealOrdersPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Layanan pasien"
-        title="Pesanan Makanan"
-        description="Pesanan yang masuk dari tablet pasien, urut dari yang paling lama menunggu."
+        eyebrow="Patient services"
+        title="Meal Orders"
+        description="Orders coming in from patient tablets, longest waiting first."
         action={
           orders.length > 0 && (
             <span className="chip bg-brand-50 text-brand-700">{orders.length} pesanan aktif</span>
@@ -82,14 +82,14 @@ export default function MealOrdersPage() {
 
       {loading ? (
         <div className="card">
-          <Loading label="Memuat pesanan…" />
+          <Loading label="Loading orders…" />
         </div>
       ) : orders.length === 0 ? (
         <div className="card">
           <EmptyState
             icon={ClipboardList}
-            title="Tidak ada pesanan aktif"
-            hint="Pesanan baru dari pasien akan muncul di sini secara otomatis."
+            title="No active orders"
+            hint="New patient orders appear here automatically."
           />
         </div>
       ) : (
@@ -121,11 +121,11 @@ export default function MealOrdersPage() {
 
                   <div className="mt-3 space-y-0.5 text-sm">
                     <p className="font-bold text-ink">
-                      Kamar {o.patient_admissions?.rooms?.room_number ?? "—"}
+                      Room {o.patient_admissions?.rooms?.room_number ?? "—"}
                     </p>
                     <p className="text-ink-soft">{o.patient_admissions?.patients?.full_name ?? "—"}</p>
                     <p className="tabular text-xs text-ink-mute">
-                      {new Date(o.order_date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ·{" "}
+                      {new Date(o.order_date).toLocaleDateString("en-US", { day: "numeric", month: "short" })} ·{" "}
                       {MEAL_SCHEDULES.find((s) => s.value === o.meal_schedule)?.label ?? o.meal_schedule}
                     </p>
                   </div>
@@ -148,10 +148,10 @@ export default function MealOrdersPage() {
                     )}
                     {o.status === "PENDING" && (
                       <button
-                        onClick={() => confirm("Tolak pesanan ini?") && updateStatus(o.id, "REJECTED")}
+                        onClick={() => confirm("Reject this order?") && updateStatus(o.id, "REJECTED")}
                         disabled={busy === o.id}
                         className="btn-danger shrink-0 px-3"
-                        title="Tolak pesanan"
+                        title="Reject order"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -171,7 +171,7 @@ export default function MealOrdersPage() {
             total={meta.total}
             limit={meta.limit}
             onPage={setPage}
-            noun="pesanan"
+            noun="orders"
             className="border-t-0"
           />
         </div>

@@ -54,7 +54,7 @@ export default function PatientsPage() {
   }, [search]);
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus data pasien ini?")) return;
+    if (!confirm("Delete this patient?")) return;
     setDeleting(id);
     await fetch(`/api/patients/${id}`, { method: "DELETE" });
     setDeleting(null);
@@ -66,12 +66,12 @@ export default function PatientsPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Perawatan"
-        title="Pasien"
-        description={loading && !res ? "Memuat data pasien…" : `${res?.total ?? 0} pasien terdaftar`}
+        eyebrow="Care"
+        title="Patients"
+        description={loading && !res ? "Loading patients…" : `${res?.total ?? 0} patients registered`}
         action={
           <Link href="/dashboard/hospital/patients/create" className="btn-primary">
-            <Plus className="h-4 w-4" /> Daftarkan pasien
+            <Plus className="h-4 w-4" /> Register patient
           </Link>
         }
       />
@@ -82,7 +82,7 @@ export default function PatientsPage() {
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-mute" />
             <input
               type="search"
-              placeholder="Cari nama pasien…"
+              placeholder="Search patient name…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="field pl-10"
@@ -91,20 +91,20 @@ export default function PatientsPage() {
         </div>
 
         {loading && !res ? (
-          <Loading label="Memuat pasien…" />
+          <Loading label="Loading patients…" />
         ) : patients.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={search ? "Pasien tidak ditemukan" : "Belum ada pasien"}
+            title={search ? "Patient not found" : "No patients yet"}
             hint={
               search
                 ? "Coba kata kunci lain."
-                : "Daftarkan pasien pertama Anda untuk mulai menggunakan Medly."
+                : "Register your first patient to start using Medly."
             }
             action={
               !search && (
                 <Link href="/dashboard/hospital/patients/create" className="btn-primary">
-                  <Plus className="h-4 w-4" /> Daftarkan pasien
+                  <Plus className="h-4 w-4" /> Register patient
                 </Link>
               )
             }
@@ -115,11 +115,11 @@ export default function PatientsPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-line bg-canvas/60">
-                    <th className="eyebrow px-6 py-3 font-bold">Pasien</th>
+                    <th className="eyebrow px-6 py-3 font-bold">Patient</th>
                     <th className="eyebrow px-6 py-3 font-bold">MRN</th>
-                    <th className="eyebrow px-6 py-3 font-bold">Usia / Gender</th>
+                    <th className="eyebrow px-6 py-3 font-bold">Age / Gender</th>
                     <th className="eyebrow px-6 py-3 font-bold">Status</th>
-                    <th className="eyebrow px-6 py-3 text-right font-bold">Aksi</th>
+                    <th className="eyebrow px-6 py-3 text-right font-bold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -143,17 +143,17 @@ export default function PatientsPage() {
                         </td>
                         <td className="tabular px-6 py-4 font-semibold text-ink-soft">{p.mrn}</td>
                         <td className="px-6 py-4 text-ink-soft">
-                          {a !== null ? `${a} th` : "—"}
-                          {p.gender ? ` · ${p.gender === "male" ? "L" : "P"}` : ""}
+                          {a !== null ? `${a} yrs` : "—"}
+                          {p.gender ? ` · ${p.gender === "male" ? "M" : "F"}` : ""}
                         </td>
                         <td className="px-6 py-4">
                           {adm ? (
                             <span className="chip bg-brand-50 text-brand-700">
                               <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-                              Dirawat{adm.rooms?.room_number ? ` · ${adm.rooms.room_number}` : ""}
+                              Admitted{adm.rooms?.room_number ? ` · ${adm.rooms.room_number}` : ""}
                             </span>
                           ) : (
-                            <span className="chip bg-canvas text-ink-mute">Tidak dirawat</span>
+                            <span className="chip bg-canvas text-ink-mute">Not admitted</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -163,15 +163,15 @@ export default function PatientsPage() {
                                 href={`/patient/${adm.id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title="Buka layar tablet pasien ini"
+                                title="Open this patient's tablet screen"
                                 className="mr-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-bold text-brand-700 transition hover:bg-brand-500 hover:text-white"
                               >
-                                <MonitorPlay className="h-3.5 w-3.5" /> Tampilkan
+                                <MonitorPlay className="h-3.5 w-3.5" /> Show
                               </a>
                             )}
                             <Link
                               href={`/dashboard/hospital/patients/${p.id}`}
-                              title="Buka rekam pasien"
+                              title="Open records"
                               className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink"
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -179,7 +179,7 @@ export default function PatientsPage() {
                             <button
                               onClick={() => handleDelete(p.id)}
                               disabled={deleting === p.id}
-                              title="Hapus"
+                              title="Delete"
                               className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -200,7 +200,7 @@ export default function PatientsPage() {
                 total={res.total}
                 limit={res.limit}
                 onPage={setPage}
-                noun="pasien"
+                noun="patients"
               />
             )}
           </>

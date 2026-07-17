@@ -36,17 +36,17 @@ export default function SpiritualPage() {
       .finally(() => setLoading(false));
   }, [admissionId]);
 
-  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Memuat…</div>;
+  if (loading) return <div className="grid flex-1 place-items-center text-xl font-bold text-ink-mute">Loading…</div>;
 
   return (
     <>
-      <BedsideTitle>Kerohanian</BedsideTitle>
+      <BedsideTitle>Spiritual</BedsideTitle>
 
       <Pager
         items={contents}
         perPage={6}
         className="grid-cols-2 grid-rows-3 sm:grid-cols-3 sm:grid-rows-2"
-        empty="Belum ada konten kerohanian"
+        empty="No spiritual content yet"
         render={(c) => {
           const Icon = ICONS[c.category] ?? HelpCircle;
           return (
