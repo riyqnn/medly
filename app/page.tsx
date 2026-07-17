@@ -260,6 +260,8 @@ export default function Home() {
   const [active, setActive] = useState("home");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [slide, setSlide] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
 
   useEffect(() => {
     const onScroll = () => {
@@ -285,10 +287,25 @@ export default function Home() {
     return () => io.disconnect();
   }, []);
 
-  useEffect(() => {
-    const t = setInterval(() => setSlide((s) => (s + 1) % TESTIMONIALS.length), 5000);
-    return () => clearInterval(t);
-  }, []);
+ const goToSlide = useCallback((next: number) => {
+  setIsAnimating((animating) => {
+    if (animating) return animating; 
+    setSlide(next);
+    return true;
+  });
+}, []);
+
+useEffect(() => {
+  const t = setTimeout(() => setIsAnimating(false), 650);
+  return () => clearTimeout(t);
+}, [slide]);
+
+useEffect(() => {
+  const t = setInterval(() => {
+    goToSlide((slide + 1) % TESTIMONIALS.length);
+  }, 5000);
+  return () => clearInterval(t);
+}, [slide, goToSlide]);
 
   const goTo = useCallback((id: string) => {
     setMenuOpen(false);
@@ -685,56 +702,109 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------------- Testimonials ---------------- */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="text-center">
-            <Reveal><span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">Testimoni</span></Reveal>
-            <Reveal delay={80}><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">Felt right there in the ward</h2></Reveal>
-          </div>
-          <Reveal delay={120} className="relative mt-12">
-            <div className="relative overflow-hidden rounded-3xl border border-black/[0.07] bg-white p-8 shadow-[0_30px_70px_-40px_rgba(22,163,74,0.35)] sm:p-12">
-              <Quote className="absolute right-8 top-6 h-16 w-16 text-[#22C55E]/10" fill="currentColor" />
-              <div className="flex transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translateX(-${slide * 100}%)` }}>
-                {TESTIMONIALS.map((t, i) => (
-                  <div key={t.name} className="w-full shrink-0">
-                    <div className={slide === i ? "md-pop-in" : "opacity-100"}>
-                      <div className="flex gap-1">{Array.from({ length: t.rating }).map((_, s) => (<Star key={s} className="h-4 w-4 text-[#22C55E]" fill="currentColor" />))}</div>
-                      <p className="mt-5 text-lg font-semibold leading-relaxed text-black sm:text-xl">“{t.quote}”</p>
-                      <div className="mt-7 flex items-center gap-3.5">
-                        <img src={img(t.avatar, 120)} alt={t.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-[#22C55E]/30" loading="lazy" />
-                        <div><p className="text-[15px] font-extrabold text-black">{t.name}</p><p className="text-[13px] font-medium text-black/55">{t.role}</p></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+ {/* ---------------- Testimonials ---------------- */}
+<section className="relative py-20 sm:py-24 lg:py-28">
+  <div className="mx-auto max-w-4xl px-6 sm:px-8">
+    <div className="text-center">
+      <Reveal>
+        <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#16A34A]">
+          Testimoni
+        </span>
+      </Reveal>
+      <Reveal delay={80}>
+        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
+          Felt right there in the ward
+        </h2>
+      </Reveal>
+    </div>
 
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <button
-                onClick={() => setSlide((s) => (s - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)}
-                aria-label="Previous"
-                className="grid h-10 w-10 place-items-center rounded-full border border-black/10 bg-white text-black/60 transition hover:-translate-x-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A] active:scale-95"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <div className="flex items-center gap-2">
-                {TESTIMONIALS.map((_, i) => (
-                  <button key={i} onClick={() => setSlide(i)} aria-label={`Testimoni ${i + 1}`} className={`h-2 rounded-full transition-all duration-500 ${slide === i ? "w-8 bg-[#16A34A]" : "w-2 bg-black/15 hover:bg-black/30"}`} />
-                ))}
+    <Reveal delay={120} className="relative mt-12 sm:mt-14">
+      {/* clipping wrapper — HANYA ini yang overflow-hidden */}
+      <div className="relative overflow-hidden rounded-3xl border border-black/[0.07] bg-white shadow-[0_30px_70px_-40px_rgba(22,163,74,0.35)]">
+        <Quote
+          className="pointer-events-none absolute right-6 top-6 h-14 w-14 text-[#22C55E]/10 sm:right-8 sm:top-8 sm:h-16 sm:w-16"
+          fill="currentColor"
+        />
+
+        {/* track: lebar total = jumlah slide x 100% */}
+        <div
+          className="flex transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{
+            width: `${TESTIMONIALS.length * 100}%`,
+            transform: `translateX(-${(100 / TESTIMONIALS.length) * slide}%)`,
+          }}
+        >
+          {TESTIMONIALS.map((t, i) => (
+            <div
+              key={t.name}
+              className="shrink-0 p-8 sm:p-10 lg:p-14"
+              style={{ width: `${100 / TESTIMONIALS.length}%` }}
+            >
+              <div className={`relative z-10 ${slide === i ? "md-pop-in" : "opacity-100"}`}>
+                <div className="flex gap-1">
+                  {Array.from({ length: t.rating }).map((_, s) => (
+                    <Star key={s} className="h-4 w-4 text-[#22C55E]" fill="currentColor" />
+                  ))}
+                </div>
+
+                <p className="mt-5 max-w-xl text-lg font-semibold leading-relaxed text-black sm:text-xl">
+                  “{t.quote}”
+                </p>
+
+                <div className="mt-8 flex items-center gap-3.5">
+                  <img
+                    src={img(t.avatar, 120)}
+                    alt={t.name}
+                    className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-[#22C55E]/30"
+                    loading="lazy"
+                  />
+                  <div>
+                    <p className="text-[15px] font-extrabold text-black">{t.name}</p>
+                    <p className="text-[13px] font-medium text-black/55">{t.role}</p>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={() => setSlide((s) => (s + 1) % TESTIMONIALS.length)}
-                aria-label="Next"
-                className="grid h-10 w-10 place-items-center rounded-full border border-black/10 bg-white text-black/60 transition hover:translate-x-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A] active:scale-95"
-              >
-                <ArrowRight className="h-5 w-5" />
-              </button>
             </div>
-          </Reveal>
+          ))}
         </div>
-      </section>
+      </div>
+
+      <div className="mt-8 flex items-center justify-center gap-5">
+        <button
+          onClick={() => goToSlide((slide - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)}
+          aria-label="Previous"
+          disabled={isAnimating}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-black/10 bg-white text-black/60 transition hover:-translate-x-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A] active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        <div className="flex items-center gap-2">
+          {TESTIMONIALS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goToSlide(i)}
+              aria-label={`Testimoni ${i + 1}`}
+              disabled={isAnimating}
+              className={`h-2 rounded-full transition-all duration-500 disabled:pointer-events-none ${
+                slide === i ? "w-8 bg-[#16A34A]" : "w-2 bg-black/15 hover:bg-black/30"
+              }`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => goToSlide((slide + 1) % TESTIMONIALS.length)}
+          aria-label="Next"
+          disabled={isAnimating}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-black/10 bg-white text-black/60 transition hover:translate-x-0.5 hover:border-[#22C55E]/50 hover:bg-[#22C55E]/10 hover:text-[#16A34A] active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          <ArrowRight className="h-5 w-5" />
+        </button>
+      </div>
+    </Reveal>
+  </div>
+</section>
 
       {/* ---------------- FAQ ---------------- */}
       <section id="faq" className="relative overflow-hidden py-24">
